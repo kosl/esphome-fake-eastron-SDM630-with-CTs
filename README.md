@@ -1,5 +1,7 @@
 ## Goal
 
+UPDATE FOR NEWER ESPHOME Version and some logging
+
 This project allows you to provide live data from a [Shelly Pro 3 EM](https://www.shelly.com/en-us/products/shop/shelly-pro-3-em) smart meter to a solar inverter that expects an [Eastron SDM630](https://www.eastroneurope.com/products/view/sdm630modbus).
 
 ## How is this working?
