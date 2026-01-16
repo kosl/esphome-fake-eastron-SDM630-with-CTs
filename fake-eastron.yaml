@@ -1,3 +1,4 @@
+
 esphome:
   name: energy-meter-bridge
   friendly_name: Energy meter bridge
@@ -13,11 +14,9 @@ logger:
 
 # Enable Home Assistant API
 api:
-  encryption:
-    key: "..."
 
 ota:
-  password: "..."
+  - platform: esphome
 
 wifi:
   ssid: !secret wifi_ssid
@@ -26,7 +25,7 @@ wifi:
   # Enable fallback hotspot (captive portal) in case wifi connection fails
   ap:
     ssid: "Fallback Hotspot"
-    password: "efdOuVuDJPPo"
+    password: "blablabla"
 
 captive_portal:
 
@@ -54,6 +53,7 @@ http_request:
   id: http_request_data
   useragent: esphome/meter-bridge
   timeout: 10s
+  verify_ssl: false
 
 modbus_server:
   - id: modbusserver
@@ -66,187 +66,320 @@ modbus_server:
         default: 0
         number: 72
         on_read: |
-          ESP_LOGD("read-modbus", "Returning register address=%d, value=0x%04x", address, value);
+          ESP_LOGD("read-modbus", "Returning 36 register address=%d, value=0x%04x", address, value);
           return value;
       - start_address: 200
         default: 0
         number: 6
         on_read: |
-          ESP_LOGD("read-modbus", "Returning unsupported register address=%d, value=0x%04x", address, value);
+          ESP_LOGD("read-modbus", "Returning Line1->Line2 etc register address=%d, value=0x%04x", address, value);
           return value;
       - start_address: 342
         default: 0
         number: 2
         on_read: |
-          ESP_LOGD("read-modbus", "Returning register address=%d, value=0x%04x", address, value);
+          ESP_LOGD("read-modbus", "Returning Total Power register address=%d, value=0x%04x", address, value);
           return value;
 
+
+# --- (Behalte den oberen Teil deiner bestehenden YAML unverändert) ---
+# Füge direkt unter time: oder an einer passenden Stelle die Sensor‑Definitionen ein:
+
+sensor:
+  - platform: template
+    name: "Phase A Voltage"
+    id: a_voltage_sensor
+    unit_of_measurement: "V"
+    accuracy_decimals: 2
+
+  - platform: template
+    name: "Phase B Voltage"
+    id: b_voltage_sensor
+    unit_of_measurement: "V"
+    accuracy_decimals: 2
+
+  - platform: template
+    name: "Phase C Voltage"
+    id: c_voltage_sensor
+    unit_of_measurement: "V"
+    accuracy_decimals: 2
+
+  - platform: template
+    name: "Phase A Current"
+    id: a_current_sensor
+    unit_of_measurement: "A"
+    accuracy_decimals: 3
+
+  - platform: template
+    name: "Phase B Current"
+    id: b_current_sensor
+    unit_of_measurement: "A"
+    accuracy_decimals: 3
+
+  - platform: template
+    name: "Phase C Current"
+    id: c_current_sensor
+    unit_of_measurement: "A"
+    accuracy_decimals: 3
+
+  - platform: template
+    name: "Phase A Active Power"
+    id: a_power_sensor
+    unit_of_measurement: "W"
+    accuracy_decimals: 1
+
+  - platform: template
+    name: "Phase B Active Power"
+    id: b_power_sensor
+    unit_of_measurement: "W"
+    accuracy_decimals: 1
+
+  - platform: template
+    name: "Phase C Active Power"
+    id: c_power_sensor
+    unit_of_measurement: "W"
+    accuracy_decimals: 1
+
+  - platform: template
+    name: "Phase A Apparent Power"
+    id: a_apparent_sensor
+    unit_of_measurement: "VA"
+    accuracy_decimals: 1
+
+  - platform: template
+    name: "Phase B Apparent Power"
+    id: b_apparent_sensor
+    unit_of_measurement: "VA"
+    accuracy_decimals: 1
+
+  - platform: template
+    name: "Phase C Apparent Power"
+    id: c_apparent_sensor
+    unit_of_measurement: "VA"
+    accuracy_decimals: 1
+
+  - platform: template
+    name: "Phase A Power Factor"
+    id: a_pf_sensor
+    unit_of_measurement: ""
+    accuracy_decimals: 3
+
+  - platform: template
+    name: "Phase B Power Factor"
+    id: b_pf_sensor
+    unit_of_measurement: ""
+    accuracy_decimals: 3
+
+  - platform: template
+    name: "Phase C Power Factor"
+    id: c_pf_sensor
+    unit_of_measurement: ""
+    accuracy_decimals: 3
+
+  - platform: template
+    name: "Total Line Current"
+    id: total_current_sensor
+    unit_of_measurement: "A"
+    accuracy_decimals: 3
+
+  - platform: template
+    name: "Total Active Power"
+    id: total_act_power_sensor
+    unit_of_measurement: "W"
+    accuracy_decimals: 1
+
+  - platform: template
+    name: "Total Apparent Power"
+    id: total_aprt_power_sensor
+    unit_of_measurement: "VA"
+    accuracy_decimals: 1
+
+  - platform: template
+    name: "Supply Frequency"
+    id: frequency_sensor
+    unit_of_measurement: "Hz"
+    accuracy_decimals: 2
+
+  - platform: template
+    name: "Total Energy kWh"
+    id: total_kwh_sensor
+    unit_of_measurement: "kWh"
+    accuracy_decimals: 3
+
+# --- Jetzt die angepassten interval / http_request Lambdas ---
+# Ersetze deine bisherigen interval/http_request Blöcke mit diesem (oder passe die Lambdas entsprechend an):
+
 interval:
-  - interval: 1s
+  - interval: 5s
     then:
       - http_request.get:
-          url: http://shellypro3em/rpc/EM.GetStatus?id=0
-          on_response: 
+          url: http://shellyIP/rpc/EM.GetStatus?id=0
+          capture_response: true
+          on_response:
             then:
               - lambda: |-
-                  json::parse_json(id(http_request_data).get_string(), [](JsonObject root) {
-                      // setting modbusserver registers
-                      // use https://www.h-schmidt.net/FloatConverter/IEEE754.html to doublecheck conversions
+                  ESP_LOGD("http", "EM.GetStatus: received body length=%d", (int)body.length());
+                  json::parse_json(body, [&](JsonObject root) -> bool {
 
-                      // convert from float to 2 uint16_t. 
-                      union 
-                      {
+                    union {
                       uint16_t x_int[2];
                       float x_f;
-                      } u;
+                    } u;
 
-                      // register 0: phase A voltage
-                      u.x_f = root["a_voltage"];
-                      id(modbusserver)->write_input_register(0, u.x_int[1]);
-                      id(modbusserver)->write_input_register(1, u.x_int[0]);
-                      ESP_LOGD("read-shelly", "Registers for phase A voltage %f set to: 0x%04x and 0x%04x", u.x_f, u.x_int[1], u.x_int[0]);
-                      // register 2: phase B voltage
-                      u.x_f = root["b_voltage"];
-                      id(modbusserver)->write_input_register(2, u.x_int[1]);
-                      id(modbusserver)->write_input_register(3, u.x_int[0]);
-                      ESP_LOGD("read-shelly", "Registers for phase B voltage %f set to: 0x%04x and 0x%04x", u.x_f, u.x_int[1], u.x_int[0]);
-                      // register 4: phase C voltage
-                      u.x_f = root["c_voltage"];
-                      id(modbusserver)->write_input_register(4, u.x_int[1]);
-                      id(modbusserver)->write_input_register(5, u.x_int[0]);
-                      ESP_LOGD("read-shelly", "Registers for phase C voltage %f set to: 0x%04x and 0x%04x", u.x_f, u.x_int[1], u.x_int[0]);
+                    auto write_float = [&](int reg, float val) {
+                      u.x_f = val;
+                      id(modbusserver)->write_input_register(reg,     u.x_int[1]);
+                      id(modbusserver)->write_input_register(reg + 1, u.x_int[0]);
+                      ESP_LOGD("modbus", "Wrote float %f to regs %d/%d (0x%04x/0x%04x)", val, reg, reg+1, u.x_int[1], u.x_int[0]);
+                    };
 
-                      // register 6: phase A current
-                      u.x_f = root["a_current"];
-                      id(modbusserver)->write_input_register(6, u.x_int[1]);
-                      id(modbusserver)->write_input_register(7, u.x_int[0]);
-                      ESP_LOGD("read-shelly", "Registers for phase A current %f set to: 0x%04x and 0x%04x", u.x_f, u.x_int[1], u.x_int[0]);
-                      // register 8: phase B current
-                      u.x_f = root["b_current"];
-                      id(modbusserver)->write_input_register(8, u.x_int[1]);
-                      id(modbusserver)->write_input_register(9, u.x_int[0]);
-                      ESP_LOGD("read-shelly", "Registers for phase B current %f set to: 0x%04x and 0x%04x", u.x_f, u.x_int[1], u.x_int[0]);
-                      // register 10: phase C current
-                      u.x_f = root["c_current"];
-                      id(modbusserver)->write_input_register(10, u.x_int[1]);
-                      id(modbusserver)->write_input_register(11, u.x_int[0]);
-                      ESP_LOGD("read-shelly", "Registers for phase C current %f set to: 0x%04x and 0x%04x", u.x_f, u.x_int[1], u.x_int[0]);
+                    // Helper to check key presence
+                    auto get_float_safe = [&](const char *key, float fallback, bool &ok) -> float {
+                      if (!root.containsKey(key)) {
+                        ESP_LOGW("shelly", "Key '%s' missing in JSON, using fallback %f", key, fallback);
+                        ok = false;
+                        return fallback;
+                      }
+                      ok = true;
+                      return root[key].as<float>();
+                    };
 
-                      // register 12: phase A power
-                      u.x_f = root["a_act_power"];
-                      u.x_f = u.x_f - 20; // adjust by 20W
-                      id(modbusserver)->write_input_register(12, u.x_int[1]);
-                      id(modbusserver)->write_input_register(13, u.x_int[0]);
-                      ESP_LOGD("read-shelly", "Registers for phase A power %f set to: 0x%04x and 0x%04x", u.x_f, u.x_int[1], u.x_int[0]);
-                      // register 14: phase B power
-                      u.x_f = root["b_act_power"];
-                      u.x_f = u.x_f - 20; // adjust by 20W
-                      id(modbusserver)->write_input_register(14, u.x_int[1]);
-                      id(modbusserver)->write_input_register(15, u.x_int[0]);
-                      ESP_LOGD("read-shelly", "Registers for phase B power %f set to: 0x%04x and 0x%04x", u.x_f, u.x_int[1], u.x_int[0]);
-                      // register 16: phase C power
-                      u.x_f = root["c_act_power"];
-                      u.x_f = u.x_f - 20; // adjust by 20W
-                      id(modbusserver)->write_input_register(16, u.x_int[1]);
-                      id(modbusserver)->write_input_register(17, u.x_int[0]);
-                      ESP_LOGD("read-shelly", "Registers for phase C power %f set to: 0x%04x and 0x%04x", u.x_f, u.x_int[1], u.x_int[0]);
-                      
-                      // register 18: phase A apparent power
-                      u.x_f = root["a_aprt_power"];
-                      u.x_f = u.x_f - 20; // adjust by 20W
-                      id(modbusserver)->write_input_register(18, u.x_int[1]);
-                      id(modbusserver)->write_input_register(19, u.x_int[0]);
-                      ESP_LOGD("read-shelly", "Registers for phase A apparent power %f set to: 0x%04x and 0x%04x", u.x_f, u.x_int[1], u.x_int[0]);
-                      // register 20: phase B apparent power
-                      u.x_f = root["b_aprt_power"];
-                      u.x_f = u.x_f - 20; // adjust by 20W
-                      id(modbusserver)->write_input_register(20, u.x_int[1]);
-                      id(modbusserver)->write_input_register(21, u.x_int[0]);
-                      ESP_LOGD("read-shelly", "Registers for phase B apparent power %f set to: 0x%04x and 0x%04x", u.x_f, u.x_int[1], u.x_int[0]);
-                      // register 22: phase C apparent power
-                      u.x_f = root["c_aprt_power"];
-                      u.x_f = u.x_f - 20; // adjust by 20W
-                      id(modbusserver)->write_input_register(22, u.x_int[1]);
-                      id(modbusserver)->write_input_register(23, u.x_int[0]);
-                      ESP_LOGD("read-shelly", "Registers for phase C apparent power %f set to: 0x%04x and 0x%04x", u.x_f, u.x_int[1], u.x_int[0]);
+                    bool ok;
 
-                      // register 24: phase A reactive power
-                      // register 26: phase B reactive power
-                      // register 28: phase C reactive power
+                    // Voltages
+                    float a_v = get_float_safe("a_voltage", 0.0f, ok);
+                    write_float(0, a_v);
+                    id(a_voltage_sensor).publish_state(a_v);
+                    ESP_LOGD("shelly", "a_voltage=%f", a_v);
 
-                      // Calculate power factor according to IEC
-                      float act_power;
-                      float aprt_power;
-                      
-                      // register 30: phase A power factor
-                      // u.x_f = root["a_pf"];
-                      act_power = root["a_act_power"];
-                      aprt_power = root["a_aprt_power"];
-                      u.x_f = act_power / aprt_power;
-                      id(modbusserver)->write_input_register(30, u.x_int[1]);
-                      id(modbusserver)->write_input_register(31, u.x_int[0]);
-                      ESP_LOGD("read-shelly", "Registers for phase A power factor %f set to: 0x%04x and 0x%04x", u.x_f, u.x_int[1], u.x_int[0]);
-                      // register 32: phase B power factor
-                      // u.x_f = root["b_pf"];
-                      act_power = root["b_act_power"];
-                      aprt_power = root["b_aprt_power"];
-                      u.x_f = act_power / aprt_power;
-                      id(modbusserver)->write_input_register(32, u.x_int[1]);
-                      id(modbusserver)->write_input_register(33, u.x_int[0]);
-                      ESP_LOGD("read-shelly", "Registers for phase B power factor %f set to: 0x%04x and 0x%04x", u.x_f, u.x_int[1], u.x_int[0]);
-                      // register 34: phase C power factor
-                      // u.x_f = root["c_pf"];
-                      act_power = root["c_act_power"];
-                      aprt_power = root["c_aprt_power"];
-                      u.x_f = act_power / aprt_power;
-                      id(modbusserver)->write_input_register(34, u.x_int[1]);
-                      id(modbusserver)->write_input_register(35, u.x_int[0]);
-                      ESP_LOGD("read-shelly", "Registers for phase C power factor %f set to: 0x%04x and 0x%04x", u.x_f, u.x_int[1], u.x_int[0]);
+                    float b_v = get_float_safe("b_voltage", 0.0f, ok);
+                    write_float(2, b_v);
+                    id(b_voltage_sensor).publish_state(b_v);
+                    ESP_LOGD("shelly", "b_voltage=%f", b_v);
 
-                      // register 48: Sum of line currents
-                      u.x_f = root["total_current"];
-                      id(modbusserver)->write_input_register(48, u.x_int[1]);
-                      id(modbusserver)->write_input_register(49, u.x_int[0]);
-                      ESP_LOGD("read-shelly", "Registers for Sum of line currents %f set to: 0x%04x and 0x%04x", u.x_f, u.x_int[1], u.x_int[0]);
-                      // register 52: Total system power
-                      u.x_f = root["total_act_power"];
-                      id(modbusserver)->write_input_register(52, u.x_int[1]);
-                      id(modbusserver)->write_input_register(53, u.x_int[0]);
-                      ESP_LOGD("read-shelly", "Registers for Total system power %f set to: 0x%04x and 0x%04x", u.x_f, u.x_int[1], u.x_int[0]);
-                      // register 56: Total system volt amps
-                      u.x_f = root["total_aprt_power"];
-                      id(modbusserver)->write_input_register(56, u.x_int[1]);
-                      id(modbusserver)->write_input_register(57, u.x_int[0]);
-                      ESP_LOGD("read-shelly", "Registers for Total system volt amps %f set to: 0x%04x and 0x%04x", u.x_f, u.x_int[1], u.x_int[0]);
+                    float c_v = get_float_safe("c_voltage", 0.0f, ok);
+                    write_float(4, c_v);
+                    id(c_voltage_sensor).publish_state(c_v);
+                    ESP_LOGD("shelly", "c_voltage=%f", c_v);
 
-                      // register 70: Frequency of supply voltages
-                      u.x_f = root["a_freq"];
-                      id(modbusserver)->write_input_register(70, u.x_int[1]);
-                      id(modbusserver)->write_input_register(71, u.x_int[0]);
-                      ESP_LOGD("read-shelly", "Registers for Frequency of supply voltages %f set to: 0x%04x and 0x%04x", u.x_f, u.x_int[1], u.x_int[0]);
+                    // Currents
+                    float a_i = get_float_safe("a_current", 0.0f, ok);
+                    write_float(6, a_i);
+                    id(a_current_sensor).publish_state(a_i);
+                    ESP_LOGD("shelly", "a_current=%f", a_i);
 
+                    float b_i = get_float_safe("b_current", 0.0f, ok);
+                    write_float(8, b_i);
+                    id(b_current_sensor).publish_state(b_i);
+                    ESP_LOGD("shelly", "b_current=%f", b_i);
+
+                    float c_i = get_float_safe("c_current", 0.0f, ok);
+                    write_float(10, c_i);
+                    id(c_current_sensor).publish_state(c_i);
+                    ESP_LOGD("shelly", "c_current=%f", c_i);
+
+                    // Active power (adjusted by -20W)
+                    float a_p = get_float_safe("a_act_power", 0.0f, ok) - 20.0f;
+                    write_float(12, a_p);
+                    id(a_power_sensor).publish_state(a_p);
+                    ESP_LOGI("shelly", "a_act_power (adj)=%f", a_p);
+
+                    float b_p = get_float_safe("b_act_power", 0.0f, ok) - 20.0f;
+                    write_float(14, b_p);
+                    id(b_power_sensor).publish_state(b_p);
+                    ESP_LOGD("shelly", "b_act_power (adj)=%f", b_p);
+
+                    float c_p = get_float_safe("c_act_power", 0.0f, ok) - 20.0f;
+                    write_float(16, c_p);
+                    id(c_power_sensor).publish_state(c_p);
+                    ESP_LOGD("shelly", "c_act_power (adj)=%f", c_p);
+
+                    // Apparent power (adjusted by -20W)
+                    float a_ap = get_float_safe("a_aprt_power", 0.0f, ok) - 20.0f;
+                    write_float(18, a_ap);
+                    id(a_apparent_sensor).publish_state(a_ap);
+                    ESP_LOGD("shelly", "a_aprt_power (adj)=%f", a_ap);
+
+                    float b_ap = get_float_safe("b_aprt_power", 0.0f, ok) - 20.0f;
+                    write_float(20, b_ap);
+                    id(b_apparent_sensor).publish_state(b_ap);
+                    ESP_LOGD("shelly", "b_aprt_power (adj)=%f", b_ap);
+
+                    float c_ap = get_float_safe("c_aprt_power", 0.0f, ok) - 20.0f;
+                    write_float(22, c_ap);
+                    id(c_apparent_sensor).publish_state(c_ap);
+                    ESP_LOGD("shelly", "c_aprt_power (adj)=%f", c_ap);
+
+                    // Power factor with division-by-zero guard
+                    float act = get_float_safe("a_act_power", 0.0f, ok);
+                    float aprt = get_float_safe("a_aprt_power", 0.0f, ok);
+                    float a_pf = (aprt != 0.0f) ? (act / aprt) : 0.0f;
+                    write_float(30, a_pf);
+                    id(a_pf_sensor).publish_state(a_pf);
+                    ESP_LOGD("shelly", "a_pf=%f", a_pf);
+
+                    act = get_float_safe("b_act_power", 0.0f, ok);
+                    aprt = get_float_safe("b_aprt_power", 0.0f, ok);
+                    float b_pf = (aprt != 0.0f) ? (act / aprt) : 0.0f;
+                    write_float(32, b_pf);
+                    id(b_pf_sensor).publish_state(b_pf);
+                    ESP_LOGD("shelly", "b_pf=%f", b_pf);
+
+                    act = get_float_safe("c_act_power", 0.0f, ok);
+                    aprt = get_float_safe("c_aprt_power", 0.0f, ok);
+                    float c_pf = (aprt != 0.0f) ? (act / aprt) : 0.0f;
+                    write_float(34, c_pf);
+                    id(c_pf_sensor).publish_state(c_pf);
+                    ESP_LOGD("shelly", "c_pf=%f", c_pf);
+
+                    // Totals
+                    float total_i = get_float_safe("total_current", 0.0f, ok);
+                    float total_act = get_float_safe("total_act_power", 0.0f, ok);
+                    float total_aprt = get_float_safe("total_aprt_power", 0.0f, ok);
+                    write_float(48, total_i);
+                    write_float(52, total_act);
+                    write_float(56, total_aprt);
+                    id(total_current_sensor).publish_state(total_i);
+                    id(total_act_power_sensor).publish_state(total_act);
+                    id(total_aprt_power_sensor).publish_state(total_aprt);
+                    ESP_LOGD("shelly", "totals: current=%f act=%f aprt=%f", total_i, total_act, total_aprt);
+
+                    // Frequency
+                    float freq = get_float_safe("a_freq", 0.0f, ok);
+                    write_float(70, freq);
+                    id(frequency_sensor).publish_state(freq);
+                    ESP_LOGD("shelly", "freq=%f", freq);
+
+                    ESP_LOGI("shelly", "EM.GetStatus processed successfully");
+                    return true;
                   });
+
       - http_request.get:
-          url: http://shellypro3em/rpc/EMData.GetStatus?id=0
-          on_response: 
+          url: http://shellyIP/rpc/EMData.GetStatus?id=0
+          capture_response: true
+          on_response:
             then:
               - lambda: |-
-                  json::parse_json(id(http_request_data).get_string(), [](JsonObject root) {
-                      // setting modbusserver registers
-                      // use https://www.h-schmidt.net/FloatConverter/IEEE754.html to doublecheck conversions
+                  ESP_LOGD("http", "EMData.GetStatus: received body length=%d", (int)body.length());
+                  json::parse_json(body, [&](JsonObject root) -> bool {
 
-                      // convert from float to 2 uint16_t. 
-                      union 
-                      {
+                    union {
                       uint16_t x_int[2];
                       float x_f;
-                      } u;
+                    } u;
 
-                      // register 342: Total kwh
-                      u.x_f = root["total_act"];
-                      id(modbusserver)->write_input_register(342, u.x_int[1]);
-                      id(modbusserver)->write_input_register(343, u.x_int[0]);
-                      ESP_LOGD("read-shelly", "Registers for Total kwh %f set to: 0x%04x and 0x%04x", u.x_f, u.x_int[1], u.x_int[0]);
+                    float total_act_kwh = 0.0f;
+                    if (root.containsKey("total_act")) {
+                      total_act_kwh = root["total_act"].as<float>();
+                    } else {
+                      ESP_LOGW("shelly", "Key 'total_act' missing in EMData.GetStatus");
+                    }
+
+                    u.x_f = total_act_kwh;
+                    id(modbusserver)->write_input_register(342, u.x_int[1]);
+                    id(modbusserver)->write_input_register(343, u.x_int[0]);
+                    id(total_kwh_sensor).publish_state(total_act_kwh);
+
+                    ESP_LOGI("shelly", "EMData.GetStatus total_act=%f kWh written to modbus", total_act_kwh);
+                    return true;
                   });
-                  
-                  
