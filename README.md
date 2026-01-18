@@ -15,7 +15,7 @@ We will use ESP32-C3 SuperMini board with addition of "external" CTs and few res
 ![CTsr](images/current-transformers.png)
 
 Since this will be installed in SUN-12K-SG04LP3 inverter we will also 
-add local [Modbus dongle](https://github.com/davidrapan/esphome-modbus_bridge) 
+add local [Modbus dongle](https://github.com/rosenrot00/esphome_modbus_bridge)  
 for use in [Solarman](https://github.com/davidrapan/ha-solarman) integration.
 
 ## How is this working?
@@ -35,7 +35,7 @@ The project provides an ESPhome component acting as a server that can be polled 
 I use a SUN-12K-SG04LP3-EU hybrid inverter. The inverter only supports two types of smart meters, which must be connected via RS485:
 
 * Eastron SDM630 Modbus V2 or V3
-* CHINT smart meter from Growatt
+* CHINT DTSU666 smart meter 
 
 In my case the inverter is installed less than 15m from the grid connection. 
 
@@ -43,14 +43,22 @@ Since the ESP32-C3 is very cheap this simple ESPhome project bridges manufacture
 
 ## Implementation
 For CP signaling the cheapest ESP32-C3 Super Mini module (€2.5-€4), some resistors, and RS485 to TTL module(s) are required.
-Compete cost is under €10 depending on the cost of CT type that can be various (cheap, split-core, different ratios, accuracy,...)
+Compete cost is under €10 excluding costs of CTs that can be various (cheap, split-core, different ratios, accuracy,...)
+
+### Burden resistor
+
+ESP32-C3 at 6dB attenuation can measure up to 1350 mV. Middle voltage is 675 mV.
+If having CT with ratio 1:3000 that at 35A primary one gets 0.01167 A at secondary. 
+Burden resistor should not be larger than R_max = 0.675/0.01167 = 57 Ohm.
+Therefore we select R = 50 Ohm that is somewhat compatible with UTP cable.
 
 ## Installation
 
 1. Connect ESP32 dev board to RS485 module.
 2. Connect RS485 A and B connectors to pins 5 (A) and 4 (B) of the Deye RJ45 Port for RS 485.
 3. Build and flash the firmware based on the [sample ESPhome config](./fake-eastron.yaml).
-4. Enable meter-reading in Deye  **TODO: explain how**
+4. Calibrate ADCs to correspond Deye CTs readings. For this CTs should be placed in serial with Deye CTs and both should show the same currents on all phases.
+5. Enable meter-reading in Deye  **TODO: explain how**
 
 ### Modbus address
 
@@ -64,12 +72,16 @@ Deye expects different smart meters at different slave addresses:
 Eastron SDM630 **v3** is a custom version with firmware influenced by Growatt. My understanding is that it allows a higher rate of request/responses, resulting in finer tracking of power demands.
 
 ## External documentation & tools
-
 * [Eastron SDM630 Modbus Protocol](docs/SDM630-Modbus_Protocol.pdf)
 * [ESP32 NodeMCU pinout](docs/ESP-32_NodeMCU_Developmentboard_Pinout.pdf)
 * [IEEE-754 Floating Point Converter](https://www.h-schmidt.net/FloatConverter/IEEE754.html)
 * [Online Modbus Parse](https://rapidscada.net/modbus/)
 * Python tool to query an Eastron; for testing/verification: [https://github.com/nmakel/sdm_modbus](https://github.com/nmakel/sdm_modbus)
+* [ESPHome current clamp sensor](https://esphome.io/components/sensor/ct_clamp)
+* [ESPHome ADC sensor](https://esphome.io/components/sensor/adc)
+* [ESPHome for Deye](https://github.com/klatremis/esphome-for-deye)
+* [ESP32-C3 Super Mini Plus](https://www.espboards.dev/esp32/esp32-c3-super-mini-plus/)
+* [Modbus dongle](https://github.com/rosenrot00/esphome_modbus_bridge)  
 
 
 [releases-shield]: https://img.shields.io/github/v/release/kosl/esphome-fake-eastron-SDM630-with-CTs
