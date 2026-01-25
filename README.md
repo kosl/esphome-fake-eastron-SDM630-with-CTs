@@ -87,6 +87,7 @@ Eastron SDM630 **v3** is a custom version with firmware influenced by Growatt. M
 * [ESPHome for Deye](https://github.com/klatremis/esphome-for-deye)
 * [ESP32-C3 Super Mini Plus](https://www.espboards.dev/esp32/esp32-c3-super-mini-plus/)
 * [Modbus bridge for Solarman](https://github.com/rosenrot00/esphome_modbus_bridge)  
+* [ESPHome PACE BMS](https://github.com/syssi/esphome-pace-bms/)
 
 
 [releases-shield]: https://img.shields.io/github/v/release/kosl/esphome-fake-eastron-SDM630-with-CTs

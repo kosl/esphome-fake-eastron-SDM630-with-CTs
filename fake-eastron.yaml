@@ -1,12 +1,11 @@
-
 esphome:
-  name: energy-meter-bridge
-  friendly_name: Energy meter bridge
+  name: deye-bridge
+  friendly_name: Deye bridge for SDM630, Solarman and PACE BMS
 
 esp32:
-  board: wemos_d1_mini32
+  board: esp32-c3-devkitc-02
   framework:
-    type: arduino
+    type: esp-idf
 
 # Enable logging
 logger:
@@ -21,69 +20,110 @@ ota:
 wifi:
   ssid: !secret wifi_ssid
   password: !secret wifi_password
+  output_power: 8.5dB
+  power_save_mode: none  # Better reliability over power saving  
 
   # Enable fallback hotspot (captive portal) in case wifi connection fails
   ap:
-    ssid: "Fallback Hotspot"
+    ssid: "Deye Fallback Hotspot"
     password: "blablabla"
 
 captive_portal:
 
-time:
-  - platform: homeassistant
-
-external_components:
-  - source: github://hankipanky/esphome-fake-eastron-SDM630
-    refresh: 60s
-    components:
-      - modbus_server
-
 uart:
-  - id: intmodbus
-    tx_pin: 17 # brown
-    rx_pin: 16 # white
+  - id: uart_meter
+    tx_pin: GPIO20
+    rx_pin: GPIO21 
     baud_rate: 9600
-    stop_bits: 1
-    data_bits: 8
-    parity: NONE
     debug:
       direction: BOTH
 
-http_request:
-  id: http_request_data
-  useragent: esphome/meter-bridge
-  timeout: 10s
-  verify_ssl: false
+# https://esphome.io/components/modbus_controller/#example-server
+modbus:
+  - uart_id: uart_meter
+    id: modbus_eastron
+    role: server
 
-modbus_server:
-  - id: modbusserver
-    uart_id: intmodbus
-    address: 2 # slave address
-#    re_pin: 18 # enable if needed
-#    de_pin: 5 # enable if needed
-    input_registers:
-      - start_address: 00
-        default: 0
-        number: 72
-        on_read: |
-          ESP_LOGD("read-modbus", "Returning 36 register address=%d, value=0x%04x", address, value);
-          return value;
-      - start_address: 200
-        default: 0
-        number: 6
-        on_read: |
-          ESP_LOGD("read-modbus", "Returning Line1->Line2 etc register address=%d, value=0x%04x", address, value);
-          return value;
-      - start_address: 342
-        default: 0
-        number: 2
-        on_read: |
-          ESP_LOGD("read-modbus", "Returning Total Power register address=%d, value=0x%04x", address, value);
-          return value;
+modbus_controller:
+  - modbus_id: modbus_eastron
+    address: 0x2 # Meter address
+    server_registers:
+      - address: 0x0000 # Phase 1 line to neutral volts.
+        value_type: FP32
+        read_lambda: |-
+          return id(a_voltage_sensor).state;
+      - address: 0x0002 # Phase 2 line to neutral volts.
+        value_type: FP32
+        read_lambda: |-
+          return id(b_voltage_sensor).state;
+      - address: 0x0004 # Phase 3 line to neutral volts.
+        value_type: FP32
+        read_lambda: |-
+          return id(c_voltage_sensor).state;
+      - address: 0x0006 # Phase 1 current.
+        value_type: FP32
+        read_lambda: |-
+          return id(a_current_sensor).state;
+      - address: 0x0008 # Phase 2 current.
+        value_type: FP32
+        read_lambda: |-
+          return id(b_current_sensor).state;
+      - address: 0x000A # Phase 3 current.
+        value_type: FP32
+        read_lambda: |-
+          return id(b_current_sensor).state;
+      - address: 0x000C # Phase 1 power.
+        value_type: FP32
+        read_lambda: |-
+          return id(a_power_sensor).state;
+      - address: 0x000C # Phase 2 power.
+        value_type: FP32
+        read_lambda: |-
+          return id(b_power_sensor).state;
+      - address: 0x0010 # Phase 1 power.
+        value_type: FP32
+        read_lambda: |-
+          return id(c_power_sensor).state;     
+      - address: 0x0012 # Phase 1 volt amps.
+        value_type: FP32
+        read_lambda: |-
+          return id(a_power_sensor).state;
+      - address: 0x0014 # Phase 2 volt amps.
+        value_type: FP32
+        read_lambda: |-
+          return id(b_power_sensor).state;
+      - address: 0x0016 # Phase 3 volt amps.
+        value_type: FP32
+        read_lambda: |-
+          return id(c_power_sensor).state;  
+      ###
+      - address: 0x002E # Average line current.
+        value_type: FP32
+        read_lambda: |-
+          return id(average_current_sensor).state;  
+      - address: 0x0030 # Sum of line currents.
+        value_type: FP32
+        read_lambda: |-
+          return id(total_current_sensor).state;  
+      - address: 0x0034 # Total system power.
+        value_type: FP32
+        read_lambda: |-
+          return id(total_act_power_sensor).state;
+      - address: 0x0038 # Total system volt amps.
+        value_type: FP32
+        read_lambda: |-
+          return id(total_act_power_sensor).state;
+      - address: 0x0046 # Frequency of supply voltages.
+        value_type: FP32
+        read_lambda: |-
+          return id(frequency_sensor).state;   
+      - address: 0x004A # Export Wh since last reset.
+        value_type: FP32
+        read_lambda: |-
+          return id(total_kwh_sensor).state;
 
-
-# --- (Behalte den oberen Teil deiner bestehenden YAML unverändert) ---
-# Füge direkt unter time: oder an einer passenden Stelle die Sensor‑Definitionen ein:
+                   
+          
 
 sensor:
   - platform: template
@@ -104,23 +144,23 @@ sensor:
     unit_of_measurement: "V"
     accuracy_decimals: 2
 
-  - platform: template
-    name: "Phase A Current"
-    id: a_current_sensor
-    unit_of_measurement: "A"
-    accuracy_decimals: 3
+  # - platform: template
+  #   name: "Phase A Current"
+  #   id: a_current_sensor
+  #   unit_of_measurement: "A"
+  #   accuracy_decimals: 3
 
-  - platform: template
-    name: "Phase B Current"
-    id: b_current_sensor
-    unit_of_measurement: "A"
-    accuracy_decimals: 3
+  # - platform: template
+  #   name: "Phase B Current"
+  #   id: b_current_sensor
+  #   unit_of_measurement: "A"
+  #   accuracy_decimals: 3
 
-  - platform: template
-    name: "Phase C Current"
-    id: c_current_sensor
-    unit_of_measurement: "A"
-    accuracy_decimals: 3
+  # - platform: template
+  #   name: "Phase C Current"
+  #   id: c_current_sensor
+  #   unit_of_measurement: "A"
+  #   accuracy_decimals: 3
 
   - platform: template
     name: "Phase A Active Power"
@@ -140,40 +180,46 @@ sensor:
     unit_of_measurement: "W"
     accuracy_decimals: 1
 
-  - platform: template
-    name: "Phase A Apparent Power"
-    id: a_apparent_sensor
-    unit_of_measurement: "VA"
-    accuracy_decimals: 1
+  # - platform: template
+  #   name: "Phase A Apparent Power"
+  #   id: a_apparent_sensor
+  #   unit_of_measurement: "VA"
+  #   accuracy_decimals: 1
+
+  # - platform: template
+  #   name: "Phase B Apparent Power"
+  #   id: b_apparent_sensor
+  #   unit_of_measurement: "VA"
+  #   accuracy_decimals: 1
+
+  # - platform: template
+  #   name: "Phase C Apparent Power"
+  #   id: c_apparent_sensor
+  #   unit_of_measurement: "VA"
+  #   accuracy_decimals: 1
+
+  # - platform: template
+  #   name: "Phase A Power Factor"
+  #   id: a_pf_sensor
+  #   unit_of_measurement: ""
+  #   accuracy_decimals: 3
+
+  # - platform: template
+  #   name: "Phase B Power Factor"
+  #   id: b_pf_sensor
+  #   unit_of_measurement: ""
+  #   accuracy_decimals: 3
+
+  # - platform: template
+  #   name: "Phase C Power Factor"
+  #   id: c_pf_sensor
+  #   unit_of_measurement: ""
+  #   accuracy_decimals: 3
 
   - platform: template
-    name: "Phase B Apparent Power"
-    id: b_apparent_sensor
-    unit_of_measurement: "VA"
-    accuracy_decimals: 1
-
-  - platform: template
-    name: "Phase C Apparent Power"
-    id: c_apparent_sensor
-    unit_of_measurement: "VA"
-    accuracy_decimals: 1
-
-  - platform: template
-    name: "Phase A Power Factor"
-    id: a_pf_sensor
-    unit_of_measurement: ""
-    accuracy_decimals: 3
-
-  - platform: template
-    name: "Phase B Power Factor"
-    id: b_pf_sensor
-    unit_of_measurement: ""
-    accuracy_decimals: 3
-
-  - platform: template
-    name: "Phase C Power Factor"
-    id: c_pf_sensor
-    unit_of_measurement: ""
+    name: "Average Line Current"
+    id: average_current_sensor
+    unit_of_measurement: "A"
     accuracy_decimals: 3
 
   - platform: template
@@ -188,11 +234,11 @@ sensor:
     unit_of_measurement: "W"
     accuracy_decimals: 1
 
-  - platform: template
-    name: "Total Apparent Power"
-    id: total_aprt_power_sensor
-    unit_of_measurement: "VA"
-    accuracy_decimals: 1
+  # - platform: template
+  #   name: "Total Apparent Power"
+  #   id: total_aprt_power_sensor
+  #   unit_of_measurement: "VA"
+  #   accuracy_decimals: 1
 
   - platform: template
     name: "Supply Frequency"
@@ -206,180 +252,90 @@ sensor:
     unit_of_measurement: "kWh"
     accuracy_decimals: 3
 
-# --- Jetzt die angepassten interval / http_request Lambdas ---
-# Ersetze deine bisherigen interval/http_request Blöcke mit diesem (oder passe die Lambdas entsprechend an):
+  # =========== Current sensors ===========
+  - platform: adc
+    id: cc_l1
+    pin:
+      number: GPIO2
+      ignore_strapping_warning: true 
+    attenuation: 6db
+  - platform: ct_clamp
+    sensor: cc_l1
+    name: "Phase A Current"
+    id: a_current_sensor
+    unit_of_measurement: "A"
+    accuracy_decimals: 3    
+    update_interval: 30s
+    filters:
+      - median:
+      - calibrate_linear:
+          method: exact
+          datapoints:
+           - 0.0390 -> 0.0
+           - 0.0630 -> 5.0
+           - 0.1184 -> 11.0
+           - 0.1665 -> 16.0
+      - clamp:
+          min_value: 0.0
+  - platform: adc
+    id: cc_l2
+    pin: GPIO3
+    attenuation: 6db
+  - platform: ct_clamp
+    sensor: cc_l2
+    name: "Phase B Current"
+    id: b_current_sensor
+    update_interval: 30s
+    filters:
+      - median
+      - calibrate_linear:
+          method: exact
+          datapoints:
+           - 0.0380 -> 0.0
+           - 0.0611 -> 5.0
+           - 0.1167 -> 11.0
+           - 0.1646 -> 16.0
+      - clamp:
+          min_value: 0.0
+  - platform: adc
+    id: cc_l3
+    pin: GPIO4
+    attenuation: 6db
+  - platform: ct_clamp
+    sensor: cc_l3
+    name: "Phase C Current"
+    id: c_current_sensor
+    update_interval: 30s
+    filters:
+      - median
+      - calibrate_linear:
+          method: exact
+          datapoints:
+           - 0.0380 -> 0.0
+           - 0.0607 -> 5.0
+           - 0.1160 -> 11.0
+           - 0.1644 -> 16.0
+      - clamp:
+          min_value: 0.0
+  
+  # =========== Diagnostic sensors ===========
+  - platform: wifi_signal
+    name: "WiFi Signal Strength"
+    id: wifi_rssi
+    update_interval: 1min  
+    unit_of_measurement: "dBm"
+    accuracy_decimals: 0
+    device_class: signal_strength
+    entity_category: diagnostic 
 
-interval:
-  - interval: 5s
-    then:
-      - http_request.get:
-          url: http://shellyIP/rpc/EM.GetStatus?id=0
-          capture_response: true
-          on_response:
-            then:
-              - lambda: |-
-                  ESP_LOGD("http", "EM.GetStatus: received body length=%d", (int)body.length());
-                  json::parse_json(body, [&](JsonObject root) -> bool {
 
-                    union {
-                      uint16_t x_int[2];
-                      float x_f;
-                    } u;
 
-                    auto write_float = [&](int reg, float val) {
-                      u.x_f = val;
-                      id(modbusserver)->write_input_register(reg,     u.x_int[1]);
-                      id(modbusserver)->write_input_register(reg + 1, u.x_int[0]);
-                      ESP_LOGD("modbus", "Wrote float %f to regs %d/%d (0x%04x/0x%04x)", val, reg, reg+1, u.x_int[1], u.x_int[0]);
-                    };
 
-                    // Helper to check key presence
-                    auto get_float_safe = [&](const char *key, float fallback, bool &ok) -> float {
-                      if (!root.containsKey(key)) {
-                        ESP_LOGW("shelly", "Key '%s' missing in JSON, using fallback %f", key, fallback);
-                        ok = false;
-                        return fallback;
-                      }
-                      ok = true;
-                      return root[key].as<float>();
-                    };
-
-                    bool ok;
-
-                    // Voltages
-                    float a_v = get_float_safe("a_voltage", 0.0f, ok);
-                    write_float(0, a_v);
-                    id(a_voltage_sensor).publish_state(a_v);
-                    ESP_LOGD("shelly", "a_voltage=%f", a_v);
-
-                    float b_v = get_float_safe("b_voltage", 0.0f, ok);
-                    write_float(2, b_v);
-                    id(b_voltage_sensor).publish_state(b_v);
-                    ESP_LOGD("shelly", "b_voltage=%f", b_v);
-
-                    float c_v = get_float_safe("c_voltage", 0.0f, ok);
-                    write_float(4, c_v);
-                    id(c_voltage_sensor).publish_state(c_v);
-                    ESP_LOGD("shelly", "c_voltage=%f", c_v);
-
-                    // Currents
-                    float a_i = get_float_safe("a_current", 0.0f, ok);
-                    write_float(6, a_i);
-                    id(a_current_sensor).publish_state(a_i);
-                    ESP_LOGD("shelly", "a_current=%f", a_i);
-
-                    float b_i = get_float_safe("b_current", 0.0f, ok);
-                    write_float(8, b_i);
-                    id(b_current_sensor).publish_state(b_i);
-                    ESP_LOGD("shelly", "b_current=%f", b_i);
-
-                    float c_i = get_float_safe("c_current", 0.0f, ok);
-                    write_float(10, c_i);
-                    id(c_current_sensor).publish_state(c_i);
-                    ESP_LOGD("shelly", "c_current=%f", c_i);
-
-                    // Active power (adjusted by -20W)
-                    float a_p = get_float_safe("a_act_power", 0.0f, ok) - 20.0f;
-                    write_float(12, a_p);
-                    id(a_power_sensor).publish_state(a_p);
-                    ESP_LOGI("shelly", "a_act_power (adj)=%f", a_p);
-
-                    float b_p = get_float_safe("b_act_power", 0.0f, ok) - 20.0f;
-                    write_float(14, b_p);
-                    id(b_power_sensor).publish_state(b_p);
-                    ESP_LOGD("shelly", "b_act_power (adj)=%f", b_p);
-
-                    float c_p = get_float_safe("c_act_power", 0.0f, ok) - 20.0f;
-                    write_float(16, c_p);
-                    id(c_power_sensor).publish_state(c_p);
-                    ESP_LOGD("shelly", "c_act_power (adj)=%f", c_p);
-
-                    // Apparent power (adjusted by -20W)
-                    float a_ap = get_float_safe("a_aprt_power", 0.0f, ok) - 20.0f;
-                    write_float(18, a_ap);
-                    id(a_apparent_sensor).publish_state(a_ap);
-                    ESP_LOGD("shelly", "a_aprt_power (adj)=%f", a_ap);
-
-                    float b_ap = get_float_safe("b_aprt_power", 0.0f, ok) - 20.0f;
-                    write_float(20, b_ap);
-                    id(b_apparent_sensor).publish_state(b_ap);
-                    ESP_LOGD("shelly", "b_aprt_power (adj)=%f", b_ap);
-
-                    float c_ap = get_float_safe("c_aprt_power", 0.0f, ok) - 20.0f;
-                    write_float(22, c_ap);
-                    id(c_apparent_sensor).publish_state(c_ap);
-                    ESP_LOGD("shelly", "c_aprt_power (adj)=%f", c_ap);
-
-                    // Power factor with division-by-zero guard
-                    float act = get_float_safe("a_act_power", 0.0f, ok);
-                    float aprt = get_float_safe("a_aprt_power", 0.0f, ok);
-                    float a_pf = (aprt != 0.0f) ? (act / aprt) : 0.0f;
-                    write_float(30, a_pf);
-                    id(a_pf_sensor).publish_state(a_pf);
-                    ESP_LOGD("shelly", "a_pf=%f", a_pf);
-
-                    act = get_float_safe("b_act_power", 0.0f, ok);
-                    aprt = get_float_safe("b_aprt_power", 0.0f, ok);
-                    float b_pf = (aprt != 0.0f) ? (act / aprt) : 0.0f;
-                    write_float(32, b_pf);
-                    id(b_pf_sensor).publish_state(b_pf);
-                    ESP_LOGD("shelly", "b_pf=%f", b_pf);
-
-                    act = get_float_safe("c_act_power", 0.0f, ok);
-                    aprt = get_float_safe("c_aprt_power", 0.0f, ok);
-                    float c_pf = (aprt != 0.0f) ? (act / aprt) : 0.0f;
-                    write_float(34, c_pf);
-                    id(c_pf_sensor).publish_state(c_pf);
-                    ESP_LOGD("shelly", "c_pf=%f", c_pf);
-
-                    // Totals
-                    float total_i = get_float_safe("total_current", 0.0f, ok);
-                    float total_act = get_float_safe("total_act_power", 0.0f, ok);
-                    float total_aprt = get_float_safe("total_aprt_power", 0.0f, ok);
-                    write_float(48, total_i);
-                    write_float(52, total_act);
-                    write_float(56, total_aprt);
-                    id(total_current_sensor).publish_state(total_i);
-                    id(total_act_power_sensor).publish_state(total_act);
-                    id(total_aprt_power_sensor).publish_state(total_aprt);
-                    ESP_LOGD("shelly", "totals: current=%f act=%f aprt=%f", total_i, total_act, total_aprt);
-
-                    // Frequency
-                    float freq = get_float_safe("a_freq", 0.0f, ok);
-                    write_float(70, freq);
-                    id(frequency_sensor).publish_state(freq);
-                    ESP_LOGD("shelly", "freq=%f", freq);
-
-                    ESP_LOGI("shelly", "EM.GetStatus processed successfully");
-                    return true;
-                  });
-
-      - http_request.get:
-          url: http://shellyIP/rpc/EMData.GetStatus?id=0
-          capture_response: true
-          on_response:
-            then:
-              - lambda: |-
-                  ESP_LOGD("http", "EMData.GetStatus: received body length=%d", (int)body.length());
-                  json::parse_json(body, [&](JsonObject root) -> bool {
-
-                    union {
-                      uint16_t x_int[2];
-                      float x_f;
-                    } u;
-
-                    float total_act_kwh = 0.0f;
-                    if (root.containsKey("total_act")) {
-                      total_act_kwh = root["total_act"].as<float>();
-                    } else {
-                      ESP_LOGW("shelly", "Key 'total_act' missing in EMData.GetStatus");
-                    }
-
-                    u.x_f = total_act_kwh;
-                    id(modbusserver)->write_input_register(342, u.x_int[1]);
-                    id(modbusserver)->write_input_register(343, u.x_int[0]);
-                    id(total_kwh_sensor).publish_state(total_act_kwh);
-
-                    ESP_LOGI("shelly", "EMData.GetStatus total_act=%f kWh written to modbus", total_act_kwh);
-                    return true;
-                  });
+# Enable built-in status LED on GPIO8
+light:
+  - platform: status_led
+    id: esp_status_led
+    pin:
+      number: GPIO8
+      inverted: true
+      ignore_strapping_warning: true 
