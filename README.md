@@ -45,12 +45,17 @@ Since the ESP32-C3 is very cheap this simple ESPhome project bridges manufacture
 For CP signaling the cheapest ESP32-C3 Super Mini module (€2.5-€4), some resistors, and RS485 to TTL module(s) are required.
 Compete cost is under €10 excluding costs of CTs that can be various (cheap, split-core, different ratios, accuracy,...)
 
+![Fake Eastron](images/fake-eastron-and-modbus-bridge.png)
+
 ### Burden resistor
 
 ESP32-C3 at 6dB attenuation can measure up to 1350 mV. Middle voltage is 675 mV.
 If having CT with ratio 1:3000 that at 35A primary one gets 0.01167 A at secondary. 
 Burden resistor should not be larger than R_max = 0.675/0.01167 = 57 Ohm.
-Therefore we select R = 50 Ohm that is somewhat compatible with UTP cable.
+Therefore we select R = 47 Ohm that is somewhat compatible with UTP cable.
+
+For getting middle voltage 0.675 V from 3.3 V divisor by selecting lower R6 at 330Ω 
+the upper R5 is (3.3-0.675)/(0.675/330)=1283Ω and therefore we select 1K2 resistor. 
 
 ## Installation
 
@@ -81,7 +86,7 @@ Eastron SDM630 **v3** is a custom version with firmware influenced by Growatt. M
 * [ESPHome ADC sensor](https://esphome.io/components/sensor/adc)
 * [ESPHome for Deye](https://github.com/klatremis/esphome-for-deye)
 * [ESP32-C3 Super Mini Plus](https://www.espboards.dev/esp32/esp32-c3-super-mini-plus/)
-* [Modbus dongle](https://github.com/rosenrot00/esphome_modbus_bridge)  
+* [Modbus bridge for Solarman](https://github.com/rosenrot00/esphome_modbus_bridge)  
 
 
 [releases-shield]: https://img.shields.io/github/v/release/kosl/esphome-fake-eastron-SDM630-with-CTs
