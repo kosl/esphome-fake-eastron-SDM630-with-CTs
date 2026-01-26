@@ -1,13 +1,3 @@
-substitutions: # defaults
-  energy_meter_device_id: device_energy_meter
-  ct_update_interval: 5s
-
-esphome:
-  devices:
-    - id: device_energy_meter
-      name: "Eastron SDM 630 (fake meter)"
-
-
 modbus_controller:
   - id: eastron
     modbus_id: modbus_eastron

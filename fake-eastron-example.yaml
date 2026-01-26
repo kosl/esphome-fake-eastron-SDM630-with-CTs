@@ -1,9 +1,12 @@
-# Fake eastron 
+# Energy meter example 
 
 esphome:
-  name: fake-eastron-example
+  name: energy-meter
   friendly_name: Deye bridge for SDM630
   min_version: 2026.1.0 
+  devices: # https://esphome.io/components/esphome/#sub-devices
+    - id: device_energy_meter
+      name: "Eastron SDM 630 (fake meter)"
 
 esp32:
   board: esp32-c3-devkitc-02
@@ -50,7 +53,7 @@ packages:
      file: fake-eastron.yaml
      vars:
        ct_update_interval: 5s
-
+       energy_meter_device_id: device_energy_meter
 
   # =========== Diagnostic sensors ===========
 sensor:
