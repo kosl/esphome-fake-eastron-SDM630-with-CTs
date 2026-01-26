@@ -1,16 +1,18 @@
+# https://github.com/kosl/esphome-fake-eastron-SDM630-with-CTs
+
 esphome:
   name: deye-bridge
   friendly_name: Deye bridge for SDM630, Solarman and PACE BMS
   min_version: 2026.1.0 
   devices: # https://esphome.io/components/esphome/#sub-devices
-    - id: energy_meter
+    - id: device_energy_meter
       name: "Eastron SDM 630 (fake meter)"
     - id: modbus_rtu_bridge
       name: "Modbus TCP to RTU Bridge"
     - id: pace_battery1
-      name: "Battery 1"
+      name: "Battery pack 1"
     - id: pace_battery2
-      name: "Battery 2"
+      name: "Battery pack 2"
 
 
 esp32:
@@ -61,293 +63,66 @@ uart:
     # stop_bits: 1                 # Optional: Default is 1
     # parity: NONE                 # Optional: Default is NONE
     rx_buffer_size: 256            # minimum 256 recommended; increase for long RTU responses
+  - id: uart_bms
+    baud_rate: 9600
+    tx_pin: GPIO5
+    rx_pin: GPIO6
+    debug:
+      direction: BOTH
+      dummy_receiver: false
 
-# https://esphome.io/components/modbus_controller/#example-server
+
 modbus:
-  - uart_id: uart_meter
-    id: modbus_eastron
-    role: server
+  - id: modbus_eastron
+    uart_id: uart_meter
+    role: server # https://esphome.io/components/modbus_controller/#example-server
+  - id: modbus_bms # https://github.com/syssi/esphome-pace-bms/blob/main/multiple-batteries-example/esp32-lilygo-can485-example.yaml
+    uart_id: uart_bms
+    send_wait_time: 200ms
+
 
 modbus_controller:
-  - modbus_id: modbus_eastron
-    address: 0x2 # Meter address
-    server_registers:
-      - address: 0x0000 # Phase 1 line to neutral volts.
-        value_type: FP32
-        read_lambda: |-
-          return id(a_voltage_sensor).state;
-      - address: 0x0002 # Phase 2 line to neutral volts.
-        value_type: FP32
-        read_lambda: |-
-          return id(b_voltage_sensor).state;
-      - address: 0x0004 # Phase 3 line to neutral volts.
-        value_type: FP32
-        read_lambda: |-
-          return id(c_voltage_sensor).state;
-      - address: 0x0006 # Phase 1 current.
-        value_type: FP32
-        read_lambda: |-
-          return id(a_current_sensor).state;
-      - address: 0x0008 # Phase 2 current.
-        value_type: FP32
-        read_lambda: |-
-          return id(b_current_sensor).state;
-      - address: 0x000A # Phase 3 current.
-        value_type: FP32
-        read_lambda: |-
-          return id(b_current_sensor).state;
-      - address: 0x000C # Phase 1 power.
-        value_type: FP32
-        read_lambda: |-
-          return id(a_power_sensor).state;
-      - address: 0x000C # Phase 2 power.
-        value_type: FP32
-        read_lambda: |-
-          return id(b_power_sensor).state;
-      - address: 0x0010 # Phase 1 power.
-        value_type: FP32
-        read_lambda: |-
-          return id(c_power_sensor).state;     
-      - address: 0x0012 # Phase 1 volt amps.
-        value_type: FP32
-        read_lambda: |-
-          return id(a_power_sensor).state;
-      - address: 0x0014 # Phase 2 volt amps.
-        value_type: FP32
-        read_lambda: |-
-          return id(b_power_sensor).state;
-      - address: 0x0016 # Phase 3 volt amps.
-        value_type: FP32
-        read_lambda: |-
-          return id(c_power_sensor).state;  
-      ###
-      - address: 0x002E # Average line current.
-        value_type: FP32
-        read_lambda: |-
-          return id(average_current_sensor).state;  
-      - address: 0x0030 # Sum of line currents.
-        value_type: FP32
-        read_lambda: |-
-          return id(total_current_sensor).state;  
-      - address: 0x0034 # Total system power.
-        value_type: FP32
-        read_lambda: |-
-          return id(total_act_power_sensor).state;
-      - address: 0x0038 # Total system volt amps.
-        value_type: FP32
-        read_lambda: |-
-          return id(total_act_power_sensor).state;
-      - address: 0x0046 # Frequency of supply voltages.
-        value_type: FP32
-        read_lambda: |-
-          return id(frequency_sensor).state;   
-      - address: 0x004A # Export Wh since last reset.
-        value_type: FP32
-        read_lambda: |-
-          return id(total_kwh_sensor).state;
+  - id: bms0
+    address: "0x01"
+    modbus_id: modbus_bms
+    command_throttle: 200ms
+    update_interval: 10s
 
+  - id: bms1
+    address: "0x02"
+    modbus_id: modbus_bms
+    command_throttle: 200ms
+    update_interval: 10s
                    
-          
+# Include packages for Eastron and each battery pack
+packages:
+  energy_meter: !include
+    file: fake-eastron.yaml
+    vars:
+      ct_update_interval: 5s
+      energy_meter_device_id: device_energy_meter
+      
+  pack_1: !include
+    file: pack.yaml
+    vars:
+      modbus_controller_id: bms0
+      pack: Pack 1
+      friendly_name: Pace BMS
+  pack_2: !include
+    file: pack.yaml
+    vars:
+      modbus_controller_id: bms1
+      pack: Pack 2
+      friendly_name: Pace BMS
 
 sensor:
-  - platform: template
-    name: "Phase A Voltage"
-    id: a_voltage_sensor
-    unit_of_measurement: "V"
-    accuracy_decimals: 2
-
-  - platform: template
-    name: "Phase B Voltage"
-    id: b_voltage_sensor
-    unit_of_measurement: "V"
-    accuracy_decimals: 2
-
-  - platform: template
-    name: "Phase C Voltage"
-    id: c_voltage_sensor
-    unit_of_measurement: "V"
-    accuracy_decimals: 2
-
-  # - platform: template
-  #   name: "Phase A Current"
-  #   id: a_current_sensor
-  #   unit_of_measurement: "A"
-  #   accuracy_decimals: 3
-
-  # - platform: template
-  #   name: "Phase B Current"
-  #   id: b_current_sensor
-  #   unit_of_measurement: "A"
-  #   accuracy_decimals: 3
-
-  # - platform: template
-  #   name: "Phase C Current"
-  #   id: c_current_sensor
-  #   unit_of_measurement: "A"
-  #   accuracy_decimals: 3
-
-  - platform: template
-    name: "Phase A Active Power"
-    id: a_power_sensor
-    unit_of_measurement: "W"
-    accuracy_decimals: 1
-
-  - platform: template
-    name: "Phase B Active Power"
-    id: b_power_sensor
-    unit_of_measurement: "W"
-    accuracy_decimals: 1
-
-  - platform: template
-    name: "Phase C Active Power"
-    id: c_power_sensor
-    unit_of_measurement: "W"
-    accuracy_decimals: 1
-
-  # - platform: template
-  #   name: "Phase A Apparent Power"
-  #   id: a_apparent_sensor
-  #   unit_of_measurement: "VA"
-  #   accuracy_decimals: 1
-
-  # - platform: template
-  #   name: "Phase B Apparent Power"
-  #   id: b_apparent_sensor
-  #   unit_of_measurement: "VA"
-  #   accuracy_decimals: 1
-
-  # - platform: template
-  #   name: "Phase C Apparent Power"
-  #   id: c_apparent_sensor
-  #   unit_of_measurement: "VA"
-  #   accuracy_decimals: 1
-
-  # - platform: template
-  #   name: "Phase A Power Factor"
-  #   id: a_pf_sensor
-  #   unit_of_measurement: ""
-  #   accuracy_decimals: 3
-
-  # - platform: template
-  #   name: "Phase B Power Factor"
-  #   id: b_pf_sensor
-  #   unit_of_measurement: ""
-  #   accuracy_decimals: 3
-
-  # - platform: template
-  #   name: "Phase C Power Factor"
-  #   id: c_pf_sensor
-  #   unit_of_measurement: ""
-  #   accuracy_decimals: 3
-
-  - platform: template
-    name: "Average Line Current"
-    id: average_current_sensor
-    unit_of_measurement: "A"
-    accuracy_decimals: 3
-
-  - platform: template
-    name: "Total Line Current"
-    id: total_current_sensor
-    unit_of_measurement: "A"
-    accuracy_decimals: 3
-
-  - platform: template
-    name: "Total Active Power"
-    id: total_act_power_sensor
-    unit_of_measurement: "W"
-    accuracy_decimals: 1
-
-  # - platform: template
-  #   name: "Total Apparent Power"
-  #   id: total_aprt_power_sensor
-  #   unit_of_measurement: "VA"
-  #   accuracy_decimals: 1
-
-  - platform: template
-    name: "Supply Frequency"
-    id: frequency_sensor
-    unit_of_measurement: "Hz"
-    accuracy_decimals: 2
-
-  - platform: template
-    name: "Total Energy kWh"
-    id: total_kwh_sensor
-    unit_of_measurement: "kWh"
-    accuracy_decimals: 3
-
-  # =========== Current sensors ===========
-  - platform: adc
-    id: cc_l1
-    pin:
-      number: GPIO2
-      ignore_strapping_warning: true 
-    attenuation: 6db
-  - platform: ct_clamp
-    sensor: cc_l1
-    name: "Phase A Current"
-    id: a_current_sensor
-    unit_of_measurement: "A"
-    accuracy_decimals: 3    
-    update_interval: 30s
-    filters:
-      - median:
-      - calibrate_linear:
-          method: exact
-          datapoints:
-           - 0.0390 -> 0.0
-           - 0.0630 -> 5.0
-           - 0.1184 -> 11.0
-           - 0.1665 -> 16.0
-      - clamp:
-          min_value: 0.0
-  - platform: adc
-    id: cc_l2
-    pin: GPIO3
-    attenuation: 6db
-  - platform: ct_clamp
-    sensor: cc_l2
-    name: "Phase B Current"
-    id: b_current_sensor
-    update_interval: 30s
-    filters:
-      - median
-      - calibrate_linear:
-          method: exact
-          datapoints:
-           - 0.0380 -> 0.0
-           - 0.0611 -> 5.0
-           - 0.1167 -> 11.0
-           - 0.1646 -> 16.0
-      - clamp:
-          min_value: 0.0
-  - platform: adc
-    id: cc_l3
-    pin: GPIO4
-    attenuation: 6db
-  - platform: ct_clamp
-    sensor: cc_l3
-    name: "Phase C Current"
-    id: c_current_sensor
-    update_interval: 30s
-    filters:
-      - median
-      - calibrate_linear:
-          method: exact
-          datapoints:
-           - 0.0380 -> 0.0
-           - 0.0607 -> 5.0
-           - 0.1160 -> 11.0
-           - 0.1644 -> 16.0
-      - clamp:
-          min_value: 0.0
-
 
   - platform: template
     name: "TCP Clients"
     id: mb_tcp_clients
     accuracy_decimals: 0
     update_interval: never
+    device_id: modbus_rtu_bridge
   
   # =========== Diagnostic sensors ===========
   - platform: wifi_signal
@@ -360,8 +135,6 @@ sensor:
     entity_category: diagnostic 
 
 
-
-
 # Enable built-in status LED on GPIO8
 light:
   - platform: status_led
@@ -370,6 +143,7 @@ light:
       number: GPIO8
       inverted: true
       ignore_strapping_warning: true 
+    entity_category: diagnostic
 
 # Modbus bridge configuration: TCP server <-> UART RTU translator
 modbus_bridge:

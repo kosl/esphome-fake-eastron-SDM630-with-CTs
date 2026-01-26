@@ -1,51 +1,16 @@
+substitutions: # defaults
+  energy_meter_device_id: device_energy_meter
+  ct_update_interval: 5s
+
 esphome:
-  name: deye-bridge
-  friendly_name: Deye bridge for SDM630, Solarman and PACE BMS
+  devices:
+    - id: device_energy_meter
+      name: "Eastron SDM 630 (fake meter)"
 
-esp32:
-  board: esp32-c3-devkitc-02
-  framework:
-    type: esp-idf
-
-# Enable logging
-logger:
-  level: INFO
-
-# Enable Home Assistant API
-api:
-
-ota:
-  - platform: esphome
-
-wifi:
-  ssid: !secret wifi_ssid
-  password: !secret wifi_password
-  output_power: 8.5dB
-  power_save_mode: none  # Better reliability over power saving  
-
-  # Enable fallback hotspot (captive portal) in case wifi connection fails
-  ap:
-    ssid: "Deye Fallback Hotspot"
-    password: "blablabla"
-
-captive_portal:
-
-uart:
-  - id: uart_meter
-    tx_pin: GPIO20
-    rx_pin: GPIO21 
-    baud_rate: 9600
-    debug:
-      direction: BOTH
-
-# https://esphome.io/components/modbus_controller/#example-server
-modbus:
-  - uart_id: uart_meter
-    id: modbus_eastron
-    role: server
 
 modbus_controller:
-  - modbus_id: modbus_eastron
+  - id: eastron
+    modbus_id: modbus_eastron
     address: 0x2 # Meter address
     server_registers:
       - address: 0x0000 # Phase 1 line to neutral volts.
@@ -122,118 +87,133 @@ modbus_controller:
         read_lambda: |-
           return id(total_kwh_sensor).state;
 
-                   
-          
-
 sensor:
   - platform: template
     name: "Phase A Voltage"
     id: a_voltage_sensor
     unit_of_measurement: "V"
     accuracy_decimals: 2
+    device_id: ${energy_meter_device_id}
 
   - platform: template
     name: "Phase B Voltage"
     id: b_voltage_sensor
     unit_of_measurement: "V"
     accuracy_decimals: 2
-
+    device_id: ${energy_meter_device_id}
+    
   - platform: template
     name: "Phase C Voltage"
     id: c_voltage_sensor
     unit_of_measurement: "V"
     accuracy_decimals: 2
+    device_id: ${energy_meter_device_id}
 
   # - platform: template
   #   name: "Phase A Current"
   #   id: a_current_sensor
   #   unit_of_measurement: "A"
   #   accuracy_decimals: 3
-
+  #   device_id: ${energy_meter_device_id}
+      
   # - platform: template
   #   name: "Phase B Current"
   #   id: b_current_sensor
   #   unit_of_measurement: "A"
   #   accuracy_decimals: 3
-
+  #   device_id: ${energy_meter_device_id}
+  
   # - platform: template
   #   name: "Phase C Current"
   #   id: c_current_sensor
   #   unit_of_measurement: "A"
   #   accuracy_decimals: 3
-
+  #   device_id: ${energy_meter_device_id}
+  
   - platform: template
     name: "Phase A Active Power"
     id: a_power_sensor
     unit_of_measurement: "W"
     accuracy_decimals: 1
-
+    device_id: ${energy_meter_device_id}
+    
   - platform: template
     name: "Phase B Active Power"
     id: b_power_sensor
     unit_of_measurement: "W"
     accuracy_decimals: 1
+    device_id: ${energy_meter_device_id}
 
   - platform: template
     name: "Phase C Active Power"
     id: c_power_sensor
     unit_of_measurement: "W"
     accuracy_decimals: 1
+    device_id: ${energy_meter_device_id}
 
   # - platform: template
   #   name: "Phase A Apparent Power"
   #   id: a_apparent_sensor
   #   unit_of_measurement: "VA"
   #   accuracy_decimals: 1
-
+  #   device_id: ${energy_meter_device_id}
+  
   # - platform: template
   #   name: "Phase B Apparent Power"
   #   id: b_apparent_sensor
   #   unit_of_measurement: "VA"
   #   accuracy_decimals: 1
-
+  #   device_id: ${energy_meter_device_id}
+  
   # - platform: template
   #   name: "Phase C Apparent Power"
   #   id: c_apparent_sensor
   #   unit_of_measurement: "VA"
   #   accuracy_decimals: 1
-
+  #   device_id: ${energy_meter_device_id}
+  
   # - platform: template
   #   name: "Phase A Power Factor"
   #   id: a_pf_sensor
   #   unit_of_measurement: ""
   #   accuracy_decimals: 3
-
+  #   device_id: ${energy_meter_device_id}
+  
   # - platform: template
   #   name: "Phase B Power Factor"
   #   id: b_pf_sensor
   #   unit_of_measurement: ""
   #   accuracy_decimals: 3
-
+  #   device_id: ${energy_meter_device_id}
+  
   # - platform: template
   #   name: "Phase C Power Factor"
   #   id: c_pf_sensor
   #   unit_of_measurement: ""
   #   accuracy_decimals: 3
-
+  #   device_id: ${energy_meter_device_id}
+  
   - platform: template
     name: "Average Line Current"
     id: average_current_sensor
     unit_of_measurement: "A"
     accuracy_decimals: 3
-
+    device_id: ${energy_meter_device_id}
+    
   - platform: template
     name: "Total Line Current"
     id: total_current_sensor
     unit_of_measurement: "A"
     accuracy_decimals: 3
-
+    device_id: ${energy_meter_device_id}
+    
   - platform: template
     name: "Total Active Power"
     id: total_act_power_sensor
     unit_of_measurement: "W"
     accuracy_decimals: 1
-
+    device_id: ${energy_meter_device_id}
+    
   # - platform: template
   #   name: "Total Apparent Power"
   #   id: total_aprt_power_sensor
@@ -245,13 +225,15 @@ sensor:
     id: frequency_sensor
     unit_of_measurement: "Hz"
     accuracy_decimals: 2
-
+    device_id: ${energy_meter_device_id}
+    
   - platform: template
     name: "Total Energy kWh"
     id: total_kwh_sensor
     unit_of_measurement: "kWh"
     accuracy_decimals: 3
-
+    device_id: ${energy_meter_device_id}
+    
   # =========== Current sensors ===========
   - platform: adc
     id: cc_l1
@@ -264,8 +246,9 @@ sensor:
     name: "Phase A Current"
     id: a_current_sensor
     unit_of_measurement: "A"
-    accuracy_decimals: 3    
-    update_interval: 30s
+    accuracy_decimals: 3
+    device_id: ${energy_meter_device_id}
+    update_interval: ${ct_update_interval}    
     filters:
       - median:
       - calibrate_linear:
@@ -285,7 +268,8 @@ sensor:
     sensor: cc_l2
     name: "Phase B Current"
     id: b_current_sensor
-    update_interval: 30s
+    device_id: ${energy_meter_device_id}    
+    update_interval: ${ct_update_interval}
     filters:
       - median
       - calibrate_linear:
@@ -304,8 +288,9 @@ sensor:
   - platform: ct_clamp
     sensor: cc_l3
     name: "Phase C Current"
+    device_id: ${energy_meter_device_id}    
     id: c_current_sensor
-    update_interval: 30s
+    update_interval: ${ct_update_interval}
     filters:
       - median
       - calibrate_linear:
@@ -317,25 +302,3 @@ sensor:
            - 0.1644 -> 16.0
       - clamp:
           min_value: 0.0
-  
-  # =========== Diagnostic sensors ===========
-  - platform: wifi_signal
-    name: "WiFi Signal Strength"
-    id: wifi_rssi
-    update_interval: 1min  
-    unit_of_measurement: "dBm"
-    accuracy_decimals: 0
-    device_class: signal_strength
-    entity_category: diagnostic 
-
-
-
-
-# Enable built-in status LED on GPIO8
-light:
-  - platform: status_led
-    id: esp_status_led
-    pin:
-      number: GPIO8
-      inverted: true
-      ignore_strapping_warning: true 
