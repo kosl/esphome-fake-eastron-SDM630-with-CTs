@@ -1,4 +1,10 @@
 # https://github.com/kosl/esphome-fake-eastron-SDM630-with-CTs
+# GPIO7 - TX to RX of bottom RS485 module
+# GPIO9 - RX to TX of bottom RS485 module
+# GPIO20 - TX to RX of top RS485 moulde
+# GPIO21 - RX to TX of top RS485 module
+# GPIO6 - TX to RX of middle RS485 module
+# GPIO5 - RX to TX of middle RS485 module
 
 esphome:
   name: deye-bridge

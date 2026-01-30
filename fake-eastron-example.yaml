@@ -35,6 +35,8 @@ wifi:
     password: "blablabla"
 
 
+# GPIO20 - TX to RX of top RS485 moulde
+# GPIO21 - RX to TX of top RS485 module
 uart:
   - id: uart_meter
     tx_pin: GPIO20

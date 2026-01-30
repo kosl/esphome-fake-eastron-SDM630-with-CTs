@@ -65,6 +65,10 @@ the upper R5 is (3.3-0.675)/(0.675/330)=1283Ω and therefore we select 1K2 resi
 4. Calibrate ADCs to correspond Deye CTs readings. For this CTs should be placed in serial with Deye CTs and both should show the same currents on all phases.
 5. Enable meter-reading in Deye  **TODO: explain how**
 
+All 5 modules (supermini, stepdown regulator below, and RS485 modules stacked) 
+with resistors for the CTs bridge shown below.
+![Board](images/board.jpeg)
+
 ### Modbus address
 
 Deye expects different smart meters at different slave addresses:
