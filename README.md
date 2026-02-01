@@ -68,6 +68,7 @@ the upper R5 is (3.3-0.675)/(0.675/330)=1283Ω and therefore we select 1K2 resi
 All 5 modules (supermini, stepdown regulator below, and RS485 modules stacked) 
 with resistors for the CTs bridge shown below.
 ![Board](images/board.jpeg)
+Note that some RS485 modules have TXD and RXD marked reversed (`tx_pin` is connected to TXD).
 
 ### Modbus address
 
@@ -82,6 +83,7 @@ Eastron SDM630 **v3** is a custom version with firmware influenced by Growatt. M
 
 ## External documentation & tools
 * [Eastron SDM630 Modbus Protocol](docs/SDM630-Modbus_Protocol.pdf)
+* [Eastron modbus register maps for SDM120 to SDM630](https://www.aggsoft.com/modbus-data-logging/eastron.htm)
 * [ESP32 NodeMCU pinout](docs/ESP-32_NodeMCU_Developmentboard_Pinout.pdf)
 * [IEEE-754 Floating Point Converter](https://www.h-schmidt.net/FloatConverter/IEEE754.html)
 * [Online Modbus Parse](https://rapidscada.net/modbus/)
