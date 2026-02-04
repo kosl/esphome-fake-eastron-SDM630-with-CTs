@@ -8,7 +8,7 @@ esphome:
           id(evse_voltage_l1).publish_state(2304);
 
 esp32:
-  board: esp32-c3-devkitc-02
+  board: esp32-s3-fh4r2 # ESP32-S3 zero board
   framework:
     type: esp-idf
 
@@ -16,8 +16,7 @@ esp32:
 logger:
   level: DEBUG
 
-# Enable Home Assistant API
-api:
+api: # Enable Home Assistant API
 
 ota:
   - platform: esphome
@@ -37,20 +36,20 @@ captive_portal:
   
 
 uart:
-# GPIO20 - RX to RXD of top RS485 module
-# GPIO21 - TX to TXD of top RS485 module
+  # GPIO4 - RX to RXD of top RS485 module
+  # GPIO5 - TX to TXD of top RS485 module
   - id: uart_modbus_client
-    tx_pin: GPIO21
-    rx_pin: GPIO20
+    rx_pin: GPIO4
+    tx_pin: GPIO5
     baud_rate: 9600
     debug: 
       direction: BOTH
 
-  # GPIO6 - RX to RXD of middle RS485 module
-  # GPIO5 - TX to TXD of middle RS485 module
+  # GPIO3 - RX to RXD of middle RS485 module
+  # GPIO1 - TX to TXD of middle RS485 module
   - id: uart_modbus_server
-    rx_pin: GPIO6
-    tx_pin: GPIO5
+    rx_pin: GPIO3
+    tx_pin: GPIO1
     baud_rate: 9600
     debug:
       direction: BOTH
@@ -100,19 +99,21 @@ sensor:
     device_class: signal_strength
     entity_category: diagnostic 
 
-# Enable built-in status LED on GPIO8
+
 light:
-  - platform: status_led
-    id: esp_status_led
-    pin:
-      number: GPIO8
-      inverted: true
-      ignore_strapping_warning: true
-    entity_category: diagnostic      
-
-# status_led:
-#   pin: 
-#     number: GPIO8
-#     inverted: true
-#     ignore_strapping_warning: true
-
+#  - platform: status_led
+ #   name: "Status LED"
+ #   id: esp_status_led
+ #   icon: "mdi:alarm-light"
+ #   pin:
+ #     number: GPIO8
+ #     inverted: false
+ #   restore_mode: ALWAYS_OFF
+  - platform: esp32_rmt_led_strip
+    rgb_order: GRB
+    chipset: ws2812
+    pin: 
+      number: GPIO21
+    num_leds: 1
+    name: "Onboard RGB LED"
+    id: onboard_rgb_led

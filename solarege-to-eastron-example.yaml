@@ -1,8 +1,11 @@
-# Energy meter example 
+# Energy meter example that has two RS485 modules to verify communication 
+# from SolarEdge inverter that translates to fake SDM630 meter acting as a slave (server)
+# Another RS485 uses standard ESPHome SDM meter component to read as a master (client)
+# the data provided from fake SDM630 meter
 
 esphome:
   name: energy-meter
-  friendly_name: Solaredge to Deye bridge for SDM630
+  friendly_name: Solaredge to SDM630 bridge for Deye Meter 2 
   min_version: 2026.1.0 
   devices: # https://esphome.io/components/esphome/#sub-devices
     - id: device_solaredge
@@ -11,7 +14,7 @@ esphome:
       name: "Solaredge Meter 1"
 
 esp32:
-  board: esp32-c3-devkitc-02
+  board: esp32-s3-fh4r2 # ESP32-S3 zero board
   framework:
     type: esp-idf
 
@@ -60,21 +63,20 @@ modbus_tcp_manager:
   read_timeout: 3s
 
 uart:
-  # GPIO20 - RX to RXD of top RS485 module
-  # GPIO21 - TX to TXD of top RS485 module
+  # GPIO4 - RX to RXD of top RS485 module
+  # GPIO5 - TX to TXD of top RS485 module
   - id: uart_meter
-    tx_pin: GPIO21
-    rx_pin: GPIO20 
+    rx_pin: GPIO4 
+    tx_pin: GPIO5
     baud_rate: 9600
     debug:
       direction: BOTH
-  # GPIO6 - RX to RXD of middle RS485 module
-  # GPIO5 - TX to TXD of middle RS485 module
+  # GPIO3 - RX to RXD of middle RS485 module
+  # GPIO1 - TX to TXD of middle RS485 module
   - id: uart_master 
-    rx_pin: GPIO6
-    tx_pin: GPIO5
-    baud_rate: 9600
-    stop_bits: 1      
+    rx_pin: GPIO3
+    tx_pin: GPIO1
+    baud_rate: 9600   
 modbus:
   - id: modbus_eastron
     uart_id: uart_meter
@@ -107,13 +109,14 @@ sensor:
 
 # Enable built-in status LED on GPIO8
 light:
-  - platform: status_led
-    id: esp_status_led
-    pin:
-      number: GPIO8
-      inverted: true
-      ignore_strapping_warning: true
-    entity_category: diagnostic      
+  - platform: esp32_rmt_led_strip
+    rgb_order: GRB
+    chipset: ws2812
+    pin: 
+      number: GPIO21
+    num_leds: 1
+    name: "Onboard RGB LED"
+    id: onboard_rgb_led
 
 button:
   - platform: restart
