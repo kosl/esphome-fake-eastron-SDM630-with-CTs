@@ -1,37 +1,41 @@
 # https://github.com/kosl/esphome-fake-eastron-SDM630-with-CTs
 # GPIO7 - TX to RX of bottom RS485 module
 # GPIO9 - RX to TX of bottom RS485 module
-# GPIO20 - TX to RX of top RS485 moulde
-# GPIO21 - RX to TX of top RS485 module
-# GPIO6 - TX to RX of middle RS485 module
-# GPIO5 - RX to TX of middle RS485 module
+# GPIO20 - RX to RXD of top RS485 module
+# GPIO21 - TX to TXD of top RS485 module
+# GPIO6 - RX to RXD of middle RS485 module
+# GPIO5 - TX to TXD of middle RS485 module
 
 esphome:
   name: deye-bridge
   friendly_name: Deye bridge for SDM630, Solarman and PACE BMS
   min_version: 2026.1.0 
   devices: # https://esphome.io/components/esphome/#sub-devices
-    - id: device_energy_meter
-      name: "Eastron SDM 630 (fake meter)"
+    - id: device_solaredge
+      name: "Solaredge Inverter"
+    - id: device_solaredge_meter1
+      name: "Solaredge Meter 1"
     - id: modbus_rtu_bridge
       name: "Modbus TCP to RTU Bridge"
-    - id: pace_battery1
-      name: "Battery pack 1"
-    - id: pace_battery2
-      name: "Battery pack 2"
+    # - id: pace_battery1
+    #   name: "Battery pack 1"
+    # - id: pace_battery2
+    #   name: "Battery pack 2"
 
 
 esp32:
   board: esp32-c3-devkitc-02
   framework:
     type: esp-idf
+    sdkconfig_options:
+      CONFIG_LWIP_MAX_SOCKETS: '16'
 
 # Enable logging
 logger:
   level: INFO
+  #baud_rate: 0
 
-# Enable Home Assistant API
-api:
+api: # Enable Home Assistant API
 
 ota:
   - platform: esphome
@@ -45,37 +49,51 @@ wifi:
   # Enable fallback hotspot (captive portal) in case wifi connection fails
   ap:
     ssid: "Deye Fallback Hotspot"
-    password: "blablabla"
+    password: !secret wifi_password
 
 captive_portal:
 
 external_components:
+  # - source: github://kosl/esphome_modbus_tcp_master@slow-async
+  #   components: [modbus_tcp_manager]
+  #   refresh: 0s  # Always use latest version during development
+  - source:
+      type: local
+      path: external_components
+    components: [modbus_tcp_manager]
   - source:
       type: git
       url: https://github.com/rosenrot00/esphome_modbus_bridge
     components: [modbus_bridge]
 
+
+# Single connection manager for the Modbus device
+modbus_tcp_manager:
+  id: modbus_device
+  host: "192.168.1.31"  # IP address of your Modbus TCP server
+  port: 502              # Default Modbus TCP port
+  unit_id: 1             # Modbus unit/slave ID
+  connection_timeout: 3s
+  read_timeout: 3s
+
 uart:
   - id: uart_meter
-    tx_pin: GPIO20
-    rx_pin: GPIO21 
+    tx_pin: GPIO21
+    rx_pin: GPIO20 
     baud_rate: 9600
-    debug:
-      direction: BOTH
-  - id: uart_bus
-    tx_pin: GPIO7
-    rx_pin: GPIO9
-    baud_rate: 9600
-    # stop_bits: 1                 # Optional: Default is 1
-    # parity: NONE                 # Optional: Default is NONE
-    rx_buffer_size: 256            # minimum 256 recommended; increase for long RTU responses
+    #debug:
+    #  direction: BOTH
+  # - id: uart_bus
+  #   tx_pin: GPIO7
+  #   rx_pin: GPIO9
+  #   baud_rate: 9600
+  #   rx_buffer_size: 256            # minimum 256 recommended; increase for long RTU responses
   - id: uart_bms
     baud_rate: 9600
-    tx_pin: GPIO5
-    rx_pin: GPIO6
-    debug:
-      direction: BOTH
-      dummy_receiver: false
+    tx_pin: GPIO6
+    rx_pin: GPIO5
+    #debug:
+    #  direction: BOTH
 
 
 modbus:
@@ -86,40 +104,45 @@ modbus:
     uart_id: uart_bms
     send_wait_time: 200ms
 
+# modbus_controller:
+#   - id: bms0
+#     address: "0x01"
+#     modbus_id: modbus_bms
+#     command_throttle: 200ms
+#     update_interval: 10s
 
-modbus_controller:
-  - id: bms0
-    address: "0x01"
-    modbus_id: modbus_bms
-    command_throttle: 200ms
-    update_interval: 10s
-
-  - id: bms1
-    address: "0x02"
-    modbus_id: modbus_bms
-    command_throttle: 200ms
-    update_interval: 10s
+#   - id: bms1
+#     address: "0x02"
+#     modbus_id: modbus_bms
+#     command_throttle: 200ms
+#     update_interval: 10s
                    
 # Include packages for Eastron and each battery pack
 packages:
+# Include packages for Eastron
+  solaredge_meter: !include
+    file: device-solaredge-tcp-sdm630.yaml
+    vars:
+      device_id_solaredge_inverter: device_solaredge
+      device_id_solaredge_meter1: device_solaredge_meter1      
+  # pack_1: !include
+  #   file: pack.yaml
+  #   vars:
+  #     modbus_controller_id: bms0
+  #     pack: Pack 1
+  #     friendly_name: Pace BMS
+  #     device_id: pace_battery1
+  # pack_2: !include
+  #   file: pack.yaml
+  #   vars:
+  #     modbus_controller_id: bms1
+  #     pack: Pack 2
+  #     friendly_name: Pace BMS
+  #     device_id: pace_battery2
   energy_meter: !include
-    file: fake-eastron.yaml
+    file: device-sdm_meter.yaml
     vars:
-      ct_update_interval: 5s
-      energy_meter_device_id: device_energy_meter
-      
-  pack_1: !include
-    file: pack.yaml
-    vars:
-      modbus_controller_id: bms0
-      pack: Pack 1
-      friendly_name: Pace BMS
-  pack_2: !include
-    file: pack.yaml
-    vars:
-      modbus_controller_id: bms1
-      pack: Pack 2
-      friendly_name: Pace BMS
+      modbus_id: modbus_bms
 
 sensor:
 
@@ -152,37 +175,37 @@ light:
     entity_category: diagnostic
 
 # Modbus bridge configuration: TCP server <-> UART RTU translator
-modbus_bridge:
-  id: mb_bridge
-  uart_id: uart_bus
-  tcp_port: 502                  # TCP port to listen on
-  rtu_response_timeout: 3000     # ms, internally clamped to >=10 ms
-  # tcp_client_timeout: 60000    # ms of inactivity before client is disconnected
-  # tcp_allowed_clients: 2       # number of simultaneous TCP clients (min 1)
-  # tcp_poll_interval: 50        # ms between TCP polls
-  # de_pin: GPIO18               # Optional: RS-485 Driver Enable (DE)
-  # re_pin: GPIO19               # Optional: RS-485 Receiver Enable (/RE) - de_pin and re_pin can be the same GPIO
-  # (DE and /RE may be the same GPIO if the transceiver ties them together)
-  # crc_bytes_swapped: false     # allows to swap CRC byte order LO/HI -> HI/LO
-  # enabled: true                # allows to enable or disable during runtime
-  # uart_wake_loop_on_rx: true   # enable ESPHome's UART low latency setting (effects not yet tested)
+# modbus_bridge:
+#   id: mb_bridge
+#   uart_id: uart_bus
+#   tcp_port: 502                  # TCP port to listen on
+#   rtu_response_timeout: 3000     # ms, internally clamped to >=10 ms
+#   # tcp_client_timeout: 60000    # ms of inactivity before client is disconnected
+#   # tcp_allowed_clients: 2       # number of simultaneous TCP clients (min 1)
+#   # tcp_poll_interval: 50        # ms between TCP polls
+#   # de_pin: GPIO18               # Optional: RS-485 Driver Enable (DE)
+#   # re_pin: GPIO19               # Optional: RS-485 Receiver Enable (/RE) - de_pin and re_pin can be the same GPIO
+#   # (DE and /RE may be the same GPIO if the transceiver ties them together)
+#   # crc_bytes_swapped: false     # allows to swap CRC byte order LO/HI -> HI/LO
+#   # enabled: true                # allows to enable or disable during runtime
+#   # uart_wake_loop_on_rx: true   # enable ESPHome's UART low latency setting (effects not yet tested)
 
-  # Event: triggered whenever number of TCP clients changes
-  on_tcp_clients_changed:
-    then:
-      - lambda: |-
-          id(tcp_clients) = count;
-      - logger.log:
-          format: "TCP clients connected: %d"
-          args: ['count']
-      - sensor.template.publish:
-            id: mb_tcp_clients
-            state: !lambda |-
-              return (int) count;
+#   # Event: triggered whenever number of TCP clients changes
+#   on_tcp_clients_changed:
+#     then:
+#       - lambda: |-
+#           id(tcp_clients) = count;
+#       - logger.log:
+#           format: "TCP clients connected: %d"
+#           args: ['count']
+#       - sensor.template.publish:
+#             id: mb_tcp_clients
+#             state: !lambda |-
+#               return (int) count;
 
 # Global variable to store connected TCP client count
-globals:
-  - id: tcp_clients
-    type: int
-    restore_value: no
-    initial_value: '0'
+# globals:
+#   - id: tcp_clients
+#     type: int
+#     restore_value: no
+#     initial_value: '0'

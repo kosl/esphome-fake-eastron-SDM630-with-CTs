@@ -1,0 +1,59 @@
+# Example configuration entry
+sensor:
+  - platform: sdm_meter
+    modbus_id: ${modbus_id}
+    update_interval: 10s    
+    address: 1
+    phase_a:
+      current:
+        name: "SDM Current A"
+      voltage:
+        name: "SDM Voltage A"
+      active_power:
+        name: "SDM Power A"
+      power_factor:
+        name: "SDM Power Factor A"
+      apparent_power:
+        name: "SDM Apparent Power A"
+      reactive_power:
+        name: "SDM Reactive Power A"
+      phase_angle:
+        name: "SDM Phase Angle A"
+    phase_b:
+      current:
+        name: "SDM Current B"
+      voltage:
+        name: "SDM Voltage B"
+      active_power:
+        name: "SDM Power B"
+      power_factor:
+        name: "SDM Power Factor B"
+      apparent_power:
+        name: "SDM Apparent Power B"
+      reactive_power:
+        name: "SDM Reactive Power B"
+      phase_angle:
+        name: "SDM Phase Angle B"
+    phase_c:
+      current:
+        name: "SDM Current C"
+      voltage:
+        name: "SDM Voltage C"
+      active_power:
+        name: "SDM Power C"
+      power_factor:
+        name: "SDM Power Factor C"
+      apparent_power:
+        name: "SDM Apparent Power C"
+      reactive_power:
+        name: "SDM Reactive Power C"
+      phase_angle:
+        name: "SDM Phase Angle C"        
+    frequency:
+      name: "SDM Frequency"
+    total_power:
+      name: "SDM Total Power"
+    import_active_energy:
+      name: "SDM Import Active Energy"
+    export_active_energy:
+      name: "SDM Export Active Energy"

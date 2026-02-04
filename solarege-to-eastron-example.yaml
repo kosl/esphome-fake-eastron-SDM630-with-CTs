@@ -1,0 +1,121 @@
+# Energy meter example 
+
+esphome:
+  name: energy-meter
+  friendly_name: Solaredge to Deye bridge for SDM630
+  min_version: 2026.1.0 
+  devices: # https://esphome.io/components/esphome/#sub-devices
+    - id: device_solaredge
+      name: "Solaredge Inverter"
+    - id: device_solaredge_meter1
+      name: "Solaredge Meter 1"
+
+esp32:
+  board: esp32-c3-devkitc-02
+  framework:
+    type: esp-idf
+
+# Enable logging
+logger:
+  level: INFO
+  logs:
+    modbus_tcp_manager: INFO
+
+
+api: # Enable Home Assistant API
+
+ota:
+  - platform: esphome
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  output_power: 8.5dB
+  power_save_mode: none  # Better reliability over power saving  
+
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+    ssid: "Deye Fallback Hotspot"
+    password: !secret wifi_password
+
+captive_portal:
+
+external_components:
+  # - source: github://kosl/esphome_modbus_tcp_master@slow-async
+  #   components: [modbus_tcp_manager]
+  #   refresh: 0s  # Always use latest version during development
+  - source:
+      type: local
+      path: external_components
+    components: [modbus_tcp_manager]
+
+
+# Single connection manager for the Modbus device
+modbus_tcp_manager:
+  id: modbus_device
+  host: "192.168.1.31"  # IP address of your Modbus TCP server
+  port: 502              # Default Modbus TCP port
+  unit_id: 1             # Modbus unit/slave ID
+  connection_timeout: 3s
+  read_timeout: 3s
+
+uart:
+  # GPIO20 - RX to RXD of top RS485 module
+  # GPIO21 - TX to TXD of top RS485 module
+  - id: uart_meter
+    tx_pin: GPIO21
+    rx_pin: GPIO20 
+    baud_rate: 9600
+    debug:
+      direction: BOTH
+  # GPIO6 - RX to RXD of middle RS485 module
+  # GPIO5 - TX to TXD of middle RS485 module
+  - id: uart_master 
+    rx_pin: GPIO6
+    tx_pin: GPIO5
+    baud_rate: 9600
+    stop_bits: 1      
+modbus:
+  - id: modbus_eastron
+    uart_id: uart_meter
+    role: server # https://esphome.io/components/modbus_controller/#example-server
+  - id: modbus_master
+    uart_id: uart_master 
+
+# Include packages for Eastron
+packages:
+  solaredge_meter: !include
+    file: device-solaredge-tcp-sdm630.yaml
+    vars:
+      device_id_solaredge_inverter: device_solaredge
+      device_id_solaredge_meter1: device_solaredge_meter1
+  energy_meter: !include
+    file: device-sdm_meter.yaml
+    vars:
+      modbus_id: modbus_master
+
+# =========== Diagnostic sensors ===========
+sensor:
+  - platform: wifi_signal
+    name: "WiFi Signal Strength"
+    id: wifi_rssi
+    update_interval: 1min  
+    unit_of_measurement: "dBm"
+    accuracy_decimals: 0
+    device_class: signal_strength
+    entity_category: diagnostic 
+
+# Enable built-in status LED on GPIO8
+light:
+  - platform: status_led
+    id: esp_status_led
+    pin:
+      number: GPIO8
+      inverted: true
+      ignore_strapping_warning: true
+    entity_category: diagnostic      
+
+button:
+  - platform: restart
+    entity_category: diagnostic
+    name: Restart

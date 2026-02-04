@@ -171,67 +171,28 @@ modbus_controller:
         read_lambda: |-
           return 0.0;
 
-number:
+
+sensor:
   - platform: template
     name: "Phase A Voltage"
     id: a_voltage_sensor
-    min_value: 195
-    max_value: 240
-    step: 0.1
-    mode: box
-    optimistic: true
-    initial_value: 230.0
     unit_of_measurement: "V"
-    device_class: voltage
+    accuracy_decimals: 2
     device_id: ${energy_meter_device_id}
 
   - platform: template
     name: "Phase B Voltage"
     id: b_voltage_sensor
-    min_value: 195
-    max_value: 240
-    step: 0.1
-    mode: box
-    optimistic: true
-    initial_value: 230.0
     unit_of_measurement: "V"
-    device_class: voltage
+    accuracy_decimals: 2
     device_id: ${energy_meter_device_id}
     
   - platform: template
     name: "Phase C Voltage"
     id: c_voltage_sensor
-    min_value: 195
-    max_value: 240
-    step: 0.1
-    mode: box
-    optimistic: true
-    initial_value: 230.0
     unit_of_measurement: "V"
-    device_class: voltage
+    accuracy_decimals: 2
     device_id: ${energy_meter_device_id}
-
-sensor:
-  # - platform: template
-  #   name: "Phase A Voltage"
-  #   id: a_voltage_sensor
-  #   unit_of_measurement: "V"
-  #   accuracy_decimals: 2
-  #   device_id: ${energy_meter_device_id}
-
-  # - platform: template
-  #   name: "Phase B Voltage"
-  #   id: b_voltage_sensor
-  #   unit_of_measurement: "V"
-  #   accuracy_decimals: 2
-  #   device_id: ${energy_meter_device_id}
-    
-  # - platform: template
-  #   name: "Phase C Voltage"
-  #   id: c_voltage_sensor
-  #   unit_of_measurement: "V"
-  #   accuracy_decimals: 2
-  #   device_id: ${energy_meter_device_id}
 
   - platform: template
     name: "Phase A Current"
@@ -275,49 +236,47 @@ sensor:
     accuracy_decimals: 1
     device_id: ${energy_meter_device_id}
 
-  # - platform: template
-  #   name: "Phase A Apparent Power"
-  #   id: a_apparent_sensor
-  #   unit_of_measurement: "VA"
-  #   accuracy_decimals: 1
-  #   device_id: ${energy_meter_device_id}
+  - platform: template
+    name: "Phase A Apparent Power"
+    id: a_apparent_sensor
+    unit_of_measurement: "VA"
+    accuracy_decimals: 1
+    device_id: ${energy_meter_device_id}
   
-  # - platform: template
-  #   name: "Phase B Apparent Power"
-  #   id: b_apparent_sensor
-  #   unit_of_measurement: "VA"
-  #   accuracy_decimals: 1
-  #   device_id: ${energy_meter_device_id}
+  - platform: template
+    name: "Phase B Apparent Power"
+    id: b_apparent_sensor
+    unit_of_measurement: "VA"
+    accuracy_decimals: 1
+    device_id: ${energy_meter_device_id}
   
-  # - platform: template
-  #   name: "Phase C Apparent Power"
-  #   id: c_apparent_sensor
-  #   unit_of_measurement: "VA"
-  #   accuracy_decimals: 1
-  #   device_id: ${energy_meter_device_id}
-
-
+  - platform: template
+    name: "Phase C Apparent Power"
+    id: c_apparent_sensor
+    unit_of_measurement: "VA"
+    accuracy_decimals: 1
+    device_id: ${energy_meter_device_id}
   
-  # - platform: template
-  #   name: "Phase A Power Factor"
-  #   id: a_pf_sensor
-  #   unit_of_measurement: ""
-  #   accuracy_decimals: 3
-  #   device_id: ${energy_meter_device_id}
+  - platform: template
+    name: "Phase A Power Factor"
+    id: a_pf_sensor
+    unit_of_measurement: ""
+    accuracy_decimals: 3
+    device_id: ${energy_meter_device_id}
   
-  # - platform: template
-  #   name: "Phase B Power Factor"
-  #   id: b_pf_sensor
-  #   unit_of_measurement: ""
-  #   accuracy_decimals: 3
-  #   device_id: ${energy_meter_device_id}
+  - platform: template
+    name: "Phase B Power Factor"
+    id: b_pf_sensor
+    unit_of_measurement: ""
+    accuracy_decimals: 3
+    device_id: ${energy_meter_device_id}
   
-  # - platform: template
-  #   name: "Phase C Power Factor"
-  #   id: c_pf_sensor
-  #   unit_of_measurement: ""
-  #   accuracy_decimals: 3
-  #   device_id: ${energy_meter_device_id}
+  - platform: template
+    name: "Phase C Power Factor"
+    id: c_pf_sensor
+    unit_of_measurement: ""
+    accuracy_decimals: 3
+    device_id: ${energy_meter_device_id}
   
   - platform: template
     name: "Average Line Current"
@@ -340,11 +299,11 @@ sensor:
     accuracy_decimals: 1
     device_id: ${energy_meter_device_id}
     
-  # - platform: template
-  #   name: "Total Apparent Power"
-  #   id: total_aprt_power_sensor
-  #   unit_of_measurement: "VA"
-  #   accuracy_decimals: 1
+  - platform: template
+    name: "Total Apparent Power"
+    id: total_aprt_power_sensor
+    unit_of_measurement: "VA"
+    accuracy_decimals: 1
 
   - platform: template
     name: "Supply Frequency"
@@ -359,72 +318,3 @@ sensor:
     unit_of_measurement: "kWh"
     accuracy_decimals: 3
     device_id: ${energy_meter_device_id}
-    
-  # =========== Current sensors ===========
-  # - platform: adc
-  #   id: cc_l1
-  #   pin:
-  #     number: GPIO2
-  #     ignore_strapping_warning: true 
-  #   attenuation: 6db
-  # - platform: ct_clamp
-  #   sensor: cc_l1
-  #   name: "Phase A Current"
-  #   id: a_current_sensor
-  #   unit_of_measurement: "A"
-  #   accuracy_decimals: 3
-  #   device_id: ${energy_meter_device_id}
-  #   update_interval: ${ct_update_interval}    
-  #   filters:
-  #     - median:
-  #     - calibrate_linear:
-  #         method: exact
-  #         datapoints:
-  #          - 0.0390 -> 0.0
-  #          - 0.0630 -> 5.0
-  #          - 0.1184 -> 11.0
-  #          - 0.1665 -> 16.0
-  #     - clamp:
-  #         min_value: 0.0
-  # - platform: adc
-  #   id: cc_l2
-  #   pin: GPIO3
-  #   attenuation: 6db
-  # - platform: ct_clamp
-  #   sensor: cc_l2
-  #   name: "Phase B Current"
-  #   id: b_current_sensor
-  #   device_id: ${energy_meter_device_id}    
-  #   update_interval: ${ct_update_interval}
-  #   filters:
-  #     - median
-  #     - calibrate_linear:
-  #         method: exact
-  #         datapoints:
-  #          - 0.0380 -> 0.0
-  #          - 0.0611 -> 5.0
-  #          - 0.1167 -> 11.0
-  #          - 0.1646 -> 16.0
-  #     - clamp:
-  #         min_value: 0.0
-  # - platform: adc
-  #   id: cc_l3
-  #   pin: GPIO4
-  #   attenuation: 6db
-  # - platform: ct_clamp
-  #   sensor: cc_l3
-  #   name: "Phase C Current"
-  #   device_id: ${energy_meter_device_id}    
-  #   id: c_current_sensor
-  #   update_interval: ${ct_update_interval}
-  #   filters:
-  #     - median
-  #     - calibrate_linear:
-  #         method: exact
-  #         datapoints:
-  #          - 0.0380 -> 0.0
-  #          - 0.0607 -> 5.0
-  #          - 0.1160 -> 11.0
-  #          - 0.1644 -> 16.0
-  #     - clamp:
-  #         min_value: 0.0
