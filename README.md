@@ -42,7 +42,7 @@ In my case the inverter is installed less than 15m from the grid connection.
 Since the ESP32-C3 is very cheap this simple ESPhome project bridges manufacturer, distance, physical layer and protocol.
 
 ## Implementation
-For CP signaling the cheapest ESP32-C3 Super Mini module (€2.5-€4), some resistors, and RS485 to TTL module(s) are required.
+For implementation the cheapest ESP32-C3 Super Mini module (€2.5-€4), some resistors, and RS485 to TTL module(s) are required.
 Compete cost is under €10 excluding costs of CTs that can be various (cheap, split-core, different ratios, accuracy,...)
 
 ![Fake Eastron](images/fake-eastron-and-modbus-bridge.png)
@@ -65,21 +65,38 @@ the upper R5 is (3.3-0.675)/(0.675/330)=1283Ω and therefore we select 1K2 resi
 4. Calibrate ADCs to correspond Deye CTs readings. For this CTs should be placed in serial with Deye CTs and both should show the same currents on all phases.
 5. Enable meter-reading in Deye  **TODO: explain how**
 
-All 5 modules (supermini, stepdown regulator below, and RS485 modules stacked) 
+All 4 modules (supermini, stepdown regulator below, and RS485 module stacked) 
 with resistors for the CTs bridge shown below.
-![Board](images/board.jpeg)
+![Board](images/board-esp32c3-ttl-modbus.jpg)
 Note that some RS485 modules have TXD and RXD marked reversed (`tx_pin` is connected to TXD).
 
-### Modbus address
+
+When more virtual devices are needed then ESP32-S3 zero is recommended that has 3 UARTS and can host Solaredge Modbus/TCP client fetching directly from the inverter or Modbus/RTU for direct Solaredge coupling.
+
+![Board](images/board-esp32s3-dual-ttl-modbus.jpg)
+
+
+### Modbus address and registers
 
 Deye expects different smart meters at different slave addresses:
 
 | Meter | Phases | Slave address |
 |---------|----------|-----------------|
+| Eastron SDM630 v2 | 3 | 1 |
 | Eastron SDM630 v2 | 3 | 2 |
-| Eastron SDM630 v3 | 3 | 3 |
 
-Eastron SDM630 **v3** is a custom version with firmware influenced by Growatt. My understanding is that it allows a higher rate of request/responses, resulting in finer tracking of power demands.
+The "Grid Tie Meter2" expects "Eastron" slave at address 0x01. If that is not available it tries also address 0x02 after 10 retries. Therefore, it is recommended to use slave address 0x01 for the meter.
+
+Requests from "Grid Tie Meter2" port are issued for 3 Phase Power registers (0x000C, 0x000E, 0x0010) every 0.17 seconds (6 Hz frequency) and energy register 0x0048 "Import Wh since last reset" (being 0 Wh) with 0x004A "Export Wh since last reset" every 1.86 seconds.
+
+### Module configurations
+
+1. [deye-bridge.yaml](deye-bridge.yaml) - Solaredge Modbus/TCP to Eastron SDM630 with Moddbus/TCP->RTU bridge for HA-Solarman
+2. [example-modbus-server.yaml](example-modbus-server.yaml) Testing two TTL-Modbus/RTU modules in client/server (master/slave) coupling.
+3. [modbus-bridge.yaml](modbus-bridge.yaml) Testing Modbus TCP to RTU bridge.
+4. [deye-esphome.yaml](deye-esphome.yaml) Testing Modbus port on Deye SUN-12K SG04LP3
+5. [fake-eastron-example.yaml](fake-eastron-example.yaml) Example of Eastron with CTs for Deye Meter2 (incomplete). Mapping for voltage can be fixed (230 V) or can be provided from source such as Deye or other inverter.
+6. [solarege-to-eastron-example.yaml](solarege-to-eastron-example.yaml) Energy meter example that has two RS485 modules to verify communication from SolarEdge inverter that translates to fake SDM630 meter acting as a slave (server). Another RS485 uses standard ESPHome SDM meter component to read as a master (client) the data provided from fake SDM630 meter.
 
 ## External documentation & tools
 * [Eastron SDM630 Modbus Protocol](docs/SDM630-Modbus_Protocol.pdf)
