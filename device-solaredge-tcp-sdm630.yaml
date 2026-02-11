@@ -242,12 +242,10 @@ sensor:
     name: "AC Lifetime Energy"
     id: I_AC_Energy_WH
     device_id: ${device_id_solaredge_inverter}
-    unit_of_measurement: kWh
+    unit_of_measurement: Wh
     accuracy_decimals: 1
     device_class: energy
     state_class: total_increasing
-    filters:
-      - multiply: 0.001   # convert Wh → kWh
 
   - platform: template
     name: "DC Current"
@@ -521,7 +519,7 @@ sensor:
 # Text sensor showing all values
 text_sensor:
   - platform: template
-    name: "Registers"
+    name: "Modbus-TCP status"
     id: all_registers_status
     entity_category: diagnostic 
     lambda: |-
@@ -540,9 +538,9 @@ binary_sensor:
 
 # Mapping of Inverter sensors to SDM630 modbus registers
 
-modbus_controller:
+modbus_server:
   - id: eastron
-    modbus_id: modbus_eastron
+    modbus_id: ${modbus_id}
     address: 0x1 # Meter address
     server_registers:
       - address: 0x0000 # Phase 1 line to neutral volts.
@@ -673,7 +671,7 @@ modbus_controller:
         value_type: FP32
         read_lambda: |-
           return id(I_AC_PF).state/100.0;
-      - address: 0x0040 # ????
+      - address: 0x0040 # ???? reserved
         value_type: FP32
         read_lambda: |-
           return 0.0;          
@@ -681,18 +679,14 @@ modbus_controller:
         value_type: FP32
         read_lambda: |-
           return 0.0;         
-      - address: 0x0044 # ????
+      - address: 0x0044 # ???? reserved
         value_type: FP32
         read_lambda: |-
           return 0.0;        
       - address: 0x0046 # Frequency of supply voltages.
         value_type: FP32
         read_lambda: |-
-          return id(I_AC_Frequency).state;   
-      - address: 0x0048 # Import Wh since last reset.
-        value_type: FP32
-        read_lambda: |-
-          return 0.0;   
+          return id(I_AC_Frequency).state;    
       - address: 0x0048 # Import Wh since last reset.
         value_type: FP32
         read_lambda: |-
