@@ -80,14 +80,15 @@ When more virtual devices are needed then ESP32-S3 zero is recommended that has 
 
 Deye expects different smart meters at different slave addresses:
 
-| Meter | Phases | Slave address |
-|---------|----------|-----------------|
-| Eastron SDM630 v2 | 3 | 1 |
-| Eastron SDM630 v2 | 3 | 2 |
+| Meter | Phases | Slave address | Registers|
+|-------|--------|---------------|----------|
+| Eastron SDM630 v2 | 3 | 1 | 0x0C, 0x0E, 0x10, 0x48, 0x4A |
+| Eastron SDM630 v2 | 3 | 2 | 0x0C, 0x0E, 0x10, 0x12 |
 
-The "Grid Tie Meter2" expects "Eastron" slave at address 0x01. If that is not available it tries also address 0x02 after 10 retries. Therefore, it is recommended to use slave address 0x01 for the meter.
+External meter is tried at address 0x01.
+The "Grid Tie Meter2" expects "Eastron" slave at address 0x02. 
 
-Requests from "Grid Tie Meter2" port are issued for 3 Phase Power registers (0x000C, 0x000E, 0x0010) every 0.17 seconds (6 Hz frequency) and energy register 0x0048 "Import Wh since last reset" (being 0 Wh) with 0x004A "Export Wh since last reset" every 1.86 seconds.
+Requests are issued for 3 Phase Power registers (0x000C, 0x000E, 0x0010) every 0.17 seconds (6 Hz frequency) and energy register 0x0048 "Import Wh since last reset" (being 0 Wh) with 0x004A "Export Wh since last reset" every 1.86 seconds. Similar frequency is used for registers 0x0C, 0x0E, 0x10, 0x12.
 
 ### Module configurations
 
