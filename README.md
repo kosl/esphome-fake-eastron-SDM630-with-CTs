@@ -29,6 +29,11 @@ The project provides an ESPhome component acting as a server that can be polled 
 * CT values are parsed and converted to IEEE-754 float and written to the matching registers.
 * Voltages for each phase can be calibrated from Deye inverter through Modbus or by Home Assistant integration.
 * The inverter queries the Modbus slave several times a second, fetching the input registers in various groups.
+* Alternatively, the power mappings for Deye (through emulated SDM630 meter) can be provided directly from the inverter. In this example this is Solaredge 17K with external utility meter that can also be used as a meter for "EX_MeterCT" input.
+
+The "Total solar power" displayed at Deye inverter is now a sum of DC Power PV1 and AC_Solar (PhaseA + PhaseB + PhaseC).
+
+    Total solar power = DC Power PV1 + AC_Solar PhaseA + AC_Solar PhaseB + AC_Solar PhaseC
 
 ## Why?
 
