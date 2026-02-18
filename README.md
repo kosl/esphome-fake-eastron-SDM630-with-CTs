@@ -103,7 +103,7 @@ Requests are issued for 3 Phase Power registers (0x000C, 0x000E, 0x0010) every 0
 4. [deye-esphome.yaml](deye-esphome.yaml) Testing Modbus port on Deye SUN-12K SG04LP3
 5. [fake-eastron-example.yaml](fake-eastron-example.yaml) Example of Eastron with CTs for Deye Meter2 (incomplete). Mapping for voltage can be fixed (230 V) or can be provided from source such as Deye or other inverter.
 6. [solarege-to-eastron-example.yaml](solarege-to-eastron-example.yaml) Energy meter example that has two RS485 modules to verify communication from SolarEdge inverter that translates to fake SDM630 meter acting as a slave (server). Another RS485 uses standard ESPHome SDM meter component to read as a master (client) the data provided from fake SDM630 meter.
-7. 
+7. [solaredge-modbus-rtu.yaml](solaredge-modbus-rtu.yaml] Solaredge logger as Modbus RTU master.
 
 ## External documentation & tools
 * [Eastron SDM630 Modbus Protocol](docs/SDM630-Modbus_Protocol.pdf)
