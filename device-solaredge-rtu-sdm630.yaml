@@ -1,0 +1,1004 @@
+# This device provides Solaredge RTU readings as fake meters for Deye as two Eastron SDM630 meters. 
+
+# https://knowledge-center.solaredge.com/sites/kc/files/sunspec-implementation-technical-note.pdf pp.15-17
+# CPU Firmware 4.22.44 SolarEdge TCP timeout issue https://github.com/evcc-io/evcc/issues/25424 and https://www.solaredge.com/en/support/residential-inverters-firmware
+#  0 40071 40072 1 I_AC_Current uint16 Amps AC Total Current value
+#  1 40072 40073 1 I_AC_CurrentA uint16 Amps AC Phase A Current value
+#  2 40073 40074 1 I_AC_CurrentB uint16 Amps AC Phase B Current value
+#  3 40074 40075 1 I_AC_CurrentC uint16 Amps AC Phase C Current value
+#  4 40075 40076 1 I_AC_Current_SF int16 AC Current scale factor
+#  5 40076 40077 1 I_AC_VoltageAB uint16 Volts AC Voltage Phase AB value
+#  6 40077 40078 1 I_AC_VoltageBC uint16 Volts AC Voltage Phase BC value
+#  7 40078 40079 1 I_AC_VoltageCA uint16 Volts AC Voltage Phase CA value
+#  8 40079 40080 1 I_AC_VoltageAN 1 uint16 Volts AC Voltage Phase A to N value
+#  9 40080 40081 1 I_AC_VoltageBN 1 uint16 Volts AC Voltage Phase B to N value
+# 10 40081 40082 1 I_AC_VoltageCN 1 uint16 Volts AC Voltage Phase C to N value
+# 11 40082 40083 1 I_AC_Voltage_SF int16 AC Voltage scale factor
+# 12 40083 40084 1 I_AC_Power int16 Watts AC Power value
+# 13 40084 40085 1 I_AC_Power_SF int16 AC Power scale factor
+# 14 40085 40086 1 I_AC_Frequency uint16 Hertz AC Frequency value
+# 15 40086 40087 1 I_AC_Frequency_SF int16 Scale factor
+# 16 40087 40088 1 I_AC_VA int16 VA Apparent Power
+# 17 40088 40089 1 I_AC_VA_SF int16 Scale factor
+# 18 40089 40090 1 I_AC_VAR2 int16 VAR Reactive Power
+# 19 40090 40091 1 I_AC_VAR_SF2 int16 Scale factor
+# 20 40091 40092 1 I_AC_PF1 int16 % Power Factor
+# 21 40092 40093 1 I_AC_PF_SF1 int16 Scale factor
+# 22 40093 40094 2 I_AC_Energy_WH acc32 WattHours AC Lifetime Energy production
+# 23 40094 40095 
+# 24 40095 40096 1 I_AC_Energy_WH_SF uint16 Scale factor
+# 25 40096 40097 1 I_DC_Current uint16 Amps DC Current value
+# 26 40097 40098 1 I_DC_Current_SF int16 Scale factor
+# 27 40098 40099 1 I_DC_Voltage uint16 Volts DC Voltage value
+# 28 40099 40100 1 I_DC_Voltage_SF int16 Scale factor
+# 29 40100 40101 1 I_DC_Power int16 Watts DC Power value
+# 30 40101 40102 1 I_DC_Power_SF int16 Scale factor
+# 31 40103 40104 1 I_Temp_Sink int16 Degrees C Heat Sink Temperature
+# 32 40106 40107 1 I_Temp_SF int16 Scale factor
+# 33 40107 40108 1 I_Status uint16 Operating State
+
+# Meter 1 pp.20-23
+# Current
+# 40190 40191 1 M_AC_Current int16 Amps AC Current (sum of active phases)
+# 40191 40192 1 M_AC_Current_A int16 Amps Phase A AC Current
+# 40192 40193 1 M_AC_Current_B int16 Amps Phase B AC Current
+# 40193 40194 1 M_AC_Current_C int16 Amps Phase C AC Current
+# 40194 40195 1 M_AC_Current_SF int16 SF AC Current Scale Factor
+# Voltage
+# Line to Neutral Voltage
+# 40195 40196 1 M_AC_Voltage_L N int16 Volts Line to Neutral AC Voltage (average of active phases)
+# 40196 40197 1 M_AC_Voltage_A N int16 Volts Phase A to Neutral AC Voltage
+# 40197 40198 1 M_AC_Voltage_B N int16 Volts Phase B to Neutral AC Voltage
+# 40198 40199 1 M_AC_Voltage_C N int16 Volts Phase C to Neutral AC Voltage
+# Line to Line Voltage
+# 40199 40200 1 M_AC_Voltage_LL int16 Volts Line to Line AC Voltage (average of active phases)
+# 40200 40201 1 M_AC_Voltage_AB int16 Volts Phase A to Phase B AC Voltage
+# 40201 40202 1 M_AC_Voltage_BC int16 Volts Phase B to Phase C AC Voltage
+# 40202 40203 1 M_AC_Voltage_CA int16 Volts Phase C to Phase A AC Voltage
+# 40203 40204 1 M_AC_Voltage_SF int16 SF AC Voltage Scale Factor 
+# Frequency
+# 40204 40205 1 M_AC_Freq int16 Herts AC Frequency
+# 40205 40206 1 M_AC_Freq_SF int16 SF AC Frequency Scale Factor Power
+# Real Power
+# 40206 40207 1 M_AC_Power int16 Watts Total Real Power (sum of active phases)
+# 40207 40208 1 M_AC_Power_A int16 Watts Phase A AC Real Power
+# 40208 40209 1 M_AC_Power_B int16 Watts Phase B AC Real Power
+# 40209 40210 1 M_AC_Power_C int16 Watts Phase C AC Real Power
+# 40210 40211 1 M_AC_Power_SF int16 SF AC Real Power Scale Factor Apparent Power
+# 40211 40212 1 M_AC_VA int16 Volt- Amps Total AC Apparent Power (sum of active phases)
+# 40212 40213 1 M_AC_VA_A int16 Volt- Amps Phase A AC Apparent Power
+# 40213 40214 1 M_AC_VA_B int16 Volt- Amps Phase B AC Apparent Power
+# 40214 40215 1 M_AC_VA_C int16 Volt- Amps Phase C AC Apparent Power
+# 40215 40216 1 M_AC_VA_SF int16 SF AC Apparent Power Scale Factor
+# Reactive Power
+# 40216 40217 1 M_AC_VAR int16 VAR Total AC Reactive Power (sum of active phases)
+# 40217 40218 1 M_AC_VAR_A int16 VAR Phase A AC Reactive Power
+# 40218 40219 1 M_AC_VAR_B int16 VAR Phase B AC Reactive Power
+# 40219 40220 1 M_AC_VAR_C int16 VAR Phase C AC Reactive Power
+# 40220 40221 1 M_AC_VAR_SF int16 SF AC Reactive Power Scale Factor
+# Power Factor
+# 40221 40222 1 M_AC_PF int16 % Average Power Factor (average of active phases)
+# 40222 40223 1 M_AC_PF_A int16int16 % Phase A Power Factor
+# 40223 40224 1 M_AC_PF_B int16 % Phase B Power Factor
+# 40224 40225 1 M_AC_PF_C int16 % Phase C Power Factor
+# 40225 40226 1 M_AC_PF_SF int16 SF AC Power Factor Scale Factor
+# Accumulated Energy
+# Real Energy
+# 40226 40227 2 M_Exported uint32 Watt- hours Total Exported Real Energy
+# 40228 40229 2 M_Exported_A uint32 Watt- hours Phase A Exported Real Energy
+# 40230 40231 2 M_Exported_A uint32 Watt- hours Phase B Exported Real Energy
+# 40232 40233 2 M_Exported_C uint32 Watt- hours Phase C Exported Real Energy
+# 40234 40235 2 M_Imported uint32 Watt- hours Total Imported Real Energy
+# 40236 40237 2 M_Imported_A uint32 Watt- hours Phase A Imported Real Energy
+# 40238 40239 2 M_Imported_B uint32 Watt- hours Phase B Imported Real Energy
+# 40240 40241 2 M_Imported_C uint32 Watt- hours Phase C Imported Real Energy
+# 40242 40243 1 M_Energy_W_SF int16 SF Real Energy Scale Factor
+# Apparent Energy
+# 40243 40244 2 M_Exported_VA uint32 VA-hours Total Exported Apparent Energy
+# 40245 40246 2 M_Exported_VA_A uint32 VA-hours Phase A Exported Apparent Energy
+# 40247 40248 2 M_Exported_VA_B uint32 VA-hours Phase B Exported Apparent Energy
+# 40249 40250 2 M_Exported_VA_C uint32 VA-hours Phase C Exported Apparent Energy
+# 40251 40252 2 M_Imported_VA uint32 VA-hours Total Imported Apparent Energy
+# 40253 40254 2 M_Imported_VA_A uint32 VA-hours Phase A Imported Apparent Energy
+# 40255 40256 2 M_Imported_VA_B uint32 VA-hours Phase B Imported Apparent Energy
+# 40257 40258 2 M_Imported_VA_C uint32 VA-hours Phase C Imported Apparent Energy
+# 40259 40260 1 M_Energy_VA_S F int16 SF Apparent Energy Scale Factor 
+# Reactive Energy
+# 40260 40261 2 M_Import_VARh_Q1 uint32 VAR-hours Quadrant 1: Total Imported Reactive Energy
+# 40262 40263 2 M_Import_VARh_Q1A uint32 VAR-hours Phase A - Quadrant 1: Imported Reactive Energy
+# 40264 40265 2 M_Import_VARh_Q1B uint32 VAR-hours Phase B- Quadrant 1: Imported Reactive Energy
+# 40266 40267 2 M_Import_VARh_Q1B uint32 VAR-hours Phase C- Quadrant 1: Imported Reactive Energy
+# 40268 40269 2 M_Import_VARh_Q2 uint32 VAR-hours Quadrant 2: Total Exported Reactive Energy
+# 40270 40271 2 M_Import_VARh_Q2A uint32 VAR-hours Phase A - Quadrant 2: Exported Reactive Energy
+# 40272 40273 2 M_Import_VARh_Q2B uint32 VAR-hours Phase B- Quadrant 2: Exported Reactive Energy
+# 40274 40275 2 M_Import_VARh_Q2C uint32 VAR-hours Phase C- Quadrant 2: Exported Reactive Energy
+# 40276 40277 2 M_Export_VARh_Q3 uint32 VAR-hours Quadrant 3: Total Exported Reactive Energy
+# 40278 40279 2 M_Export_VARh_Q3A uint32 VAR-hours Phase A - Quadrant 3: Exported Reactive Energy
+# 40280 40281 2 M_Export_VARh_Q3B uint32 VAR-hours Phase B- Quadrant 3: Exported Reactive Energy
+# 40282 40283 2 M_Export_VARh_Q3C uint32 VAR-hours Phase C- Quadrant 3: Exported Reactive Energy
+# 40284 40285 2 M_Export_VARh_Q4 uint32 VAR-hours Quadrant 4: Total Exported Reactive Energy
+# 40286 40287 2 M_Export_VARh_Q4A uint32 VAR-hours Phase A - Quadrant 4: Exported Reactive Energy
+# 40288 40289 2 M_Export_VARh_Q4B uint32 VAR-hours Phase B- Quadrant 4: Exported Reactive Energy
+# 40290 40291 2 M_Export_VARh_Q4C uint32 VAR-hours Phase C- Quadrant 4: Exported Reactive Energy
+# 40292 40293 1 M_Energy_VAR_SF int16 SF Reactive Energy Scale Factor
+
+modbus_controller:
+  - id: solaredge_controller
+    address: 0x03
+    modbus_id: ${modbus_id_solaredge}
+    update_interval: never
+    setup_priority: -10
+    on_command_sent:
+      then:
+        - lambda: |-
+            id(global_modbus_response_timer) = millis();
+            ESP_LOGD("timing", "Solaredge command sent...");
+
+            
+
+globals:
+  - id: global_ac_power_a
+    type: float
+    restore_value: no
+    initial_value: '0.0f'
+  - id: global_ac_power_b
+    type: float
+    restore_value: no
+    initial_value: '0.0f'
+  - id: global_ac_power_c
+    type: float
+    restore_value: no
+    initial_value: '0.0f'
+  - id: global_ac_power_va_a
+    type: float
+    restore_value: no
+    initial_value: '0.0f'
+  - id: global_ac_power_va_b
+    type: float
+    restore_value: no
+    initial_value: '0.0f'
+  - id: global_ac_power_va_c
+    type: float
+    restore_value: no
+    initial_value: '0.0f'
+  - id: global_ac_pf
+    type: float
+    restore_value: no
+    initial_value: '100.0f'
+  - id: global_ac_power_total
+    type: float
+    restore_value: no
+    initial_value: '0.0f'
+  - id: global_dc_power
+    type: float
+    restore_value: no
+    initial_value: '0.0f'
+  - id: global_dc_current
+    type: float
+    restore_value: no
+    initial_value: '0.0f'
+  - id: global_dc_voltage
+    type: float
+    restore_value: no
+    initial_value: '0.0f'
+  - id: global_ac_frequency
+    type: float
+    restore_value: no
+    initial_value: '0.0f'
+  - id: global_ac_voltage_an
+    type: float
+    restore_value: no
+    initial_value: '0.0f'
+  - id: global_ac_voltage_bn
+    type: float
+    restore_value: no
+    initial_value: '0.0f'
+  - id: global_ac_voltage_cn
+    type: float
+    restore_value: no
+    initial_value: '0.0f'
+  - id: global_ac_energy_wh
+    type: float
+    restore_value: no
+    initial_value: '0.0f'
+  - id: global_m_ac_current_total
+    type: float
+    restore_value: no
+    initial_value: '0.0f'
+  - id: global_m_ac_current_a
+    type: float
+    restore_value: no
+    initial_value: '0.0f'
+  - id: global_m_ac_current_b
+    type: float
+    restore_value: no
+    initial_value: '0.0f'
+  - id: global_m_ac_current_c
+    type: float
+    restore_value: no
+    initial_value: '0.0f'
+  - id: global_m_ac_voltage_ln_total
+    type: float
+    restore_value: no
+    initial_value: '0.0f'
+  - id: global_m_ac_voltage_a_n
+    type: float
+    restore_value: no
+    initial_value: '0.0f'
+  - id: global_m_ac_voltage_b_n
+    type: float
+    restore_value: no
+    initial_value: '0.0f'
+  - id: global_m_ac_voltage_c_n
+    type: float
+    restore_value: no
+    initial_value: '0.0f'
+  - id: global_m_ac_power_total
+    type: float
+    restore_value: no
+    initial_value: '0.0f'
+  - id: global_m_ac_power_a
+    type: float
+    restore_value: no
+    initial_value: '0.0f'
+  - id: global_m_ac_power_b
+    type: float
+    restore_value: no
+    initial_value: '0.0f'
+  - id: global_m_ac_power_c
+    type: float
+    restore_value: no
+    initial_value: '0.0f'
+  - id: global_m_exported_total
+    type: float
+    restore_value: no
+    initial_value: '0.0f'
+  - id: global_m_exported_a
+    type: float
+    restore_value: no
+    initial_value: '0.0f'
+  - id: global_m_exported_b
+    type: float
+    restore_value: no
+    initial_value: '0.0f'
+  - id: global_m_exported_c
+    type: float
+    restore_value: no
+    initial_value: '0.0f'
+  - id: global_m_imported_total
+    type: float
+    restore_value: no
+    initial_value: '0.0f'
+  - id: global_m_imported_a
+    type: float
+    restore_value: no
+    initial_value: '0.0f'
+  - id: global_m_imported_b
+    type: float
+    restore_value: no
+    initial_value: '0.0f'
+  - id: global_m_imported_c
+    type: float
+    restore_value: no
+    initial_value: '0.0f'
+  - id: global_modbus_response_timer
+    type: uint32_t
+    restore_value: no
+    initial_value: '0'
+
+# Mapping of Inverter sensors to SDM630 modbus registers
+
+modbus_server:
+  - id: utility_meter # NB This meter must not be enabled when peak shaving is used
+    modbus_id: ${modbus_id_meter}
+    address: 0x01 # Meter address
+    server_registers:
+      - address: 0x000C # Phase 1 power.
+        value_type: FP32
+        read_lambda: |-
+          return id(global_m_ac_power_a);
+      - address: 0x000E # Phase 2 power.
+        value_type: FP32
+        read_lambda: |-
+          return id(global_m_ac_power_b);
+      - address: 0x0010 # Phase 3 power.
+        value_type: FP32
+        read_lambda: |-
+          return id(global_m_ac_power_c);
+      - address: 0x0048 # Import Wh since last reset
+        value_type: FP32
+        read_lambda: |-
+          return id(global_m_imported_total);     
+      - address: 0x004A # Export Wh since last reset
+        value_type: FP32
+        read_lambda: |-
+          return id(global_m_exported_total);
+  - id: grid_side_inverter_meter_2
+    modbus_id: ${modbus_id_meter}
+    address: 0x02 # Meter address
+    server_registers:
+      - address: 0x000C # Phase 1 power.
+        value_type: FP32
+        read_lambda: |-
+          return id(global_ac_power_a);//+11.23;
+      - address: 0x000E # Phase 2 power.
+        value_type: FP32
+        read_lambda: |-
+          return id(global_ac_power_b);//+22.34;
+      - address: 0x0010 # Phase 3 power.
+        value_type: FP32
+        read_lambda: |-
+          return id(global_ac_power_c);//+33.45;
+      - address: 0x0012 # Phase 1 volt amps.
+        value_type: FP32
+        read_lambda: |-
+          return id(global_ac_power_va_a);//+44.56;
+      - address: 0x0014 # Phase 2 volt amps.
+        value_type: FP32
+        read_lambda: |-
+          return id(global_ac_power_va_b);
+      - address: 0x0016 # Phase 3 volt amps.
+        value_type: FP32
+        read_lambda: |-
+          return id(global_ac_power_va_c);
+
+interval:
+  - interval: 1.5s
+    then:
+      - lambda: |-
+          static uint16_t skip = 2;
+          if (skip++ % 2 != 0) return;
+          auto *controller = id(solaredge_controller);
+          static bool pending = false; 
+          
+          if (pending) {
+            ESP_LOGW("modbus_solaredge", "Pending reading meter. Skipping...");
+          }
+          pending = true;
+
+          constexpr uint16_t start_addr = 40190; // 0-based for 40191
+          constexpr uint16_t count = 53; // up to 40242
+
+          // Fast scale-factor to multiplier
+          auto sf_to_mul = [](int16_t sf) -> float {
+            switch (sf) {
+              case -1:  return 0.1f;
+              case -2:  return 0.01f;
+              case  0:  return 1.0f;
+              case -3:  return 0.001f;
+              case -4:  return 0.0001f;
+              case  1:  return 10.0f;
+              case  2:  return 100.0f;
+              default:
+                ESP_LOGW("scale", "Unexpected meter SF:  using powf(10, %d)", sf);
+                return powf(10.0f, sf);
+            }
+          };
+
+          auto cmd = esphome::modbus_controller::ModbusCommandItem::create_read_command(
+            controller,
+            ModbusRegisterType::HOLDING,
+            start_addr,
+            count,
+            [controller, sf_to_mul](ModbusRegisterType reg_type, uint16_t addr, const std::vector<uint8_t> &data) {
+              pending = false;
+              ESP_LOGI("timing", "Solaredge METER took %u ms to reply", millis() - id(global_modbus_response_timer));
+              if (data.size() != count * 2) {
+                ESP_LOGE("modbus_meter1", "Invalid response size: got %zu, expected %u", data.size(), count * 2);
+                return;
+              }
+
+              // Helper lambdas
+              auto get_u16 = [&data](size_t reg_offset) -> uint16_t {
+                size_t byte_idx = reg_offset * 2;
+                return (static_cast<uint16_t>(data[byte_idx]) << 8) |
+                      static_cast<uint16_t>(data[byte_idx + 1]);
+              };
+
+              auto get_s16 = [&get_u16](size_t reg_offset) -> int16_t {
+                return static_cast<int16_t>(get_u16(reg_offset));
+              };
+
+              auto get_u32 = [&get_u16](size_t reg_offset) -> uint32_t {
+                return (static_cast<uint32_t>(get_u16(reg_offset)) << 16) |
+                       get_u16(reg_offset + 1);
+              };
+
+              // ── Extract scale factors ─────────────────────────────
+              int16_t sf_current = get_s16(4);  // 40194
+              int16_t sf_voltage = get_s16(13); // 40203
+              int16_t sf_power   = get_s16(20); // 40210
+              int16_t sf_energy  = get_s16(52); // 40242
+
+              // ── Fixed multipliers ────────────────────────────────
+              float mul_current = sf_to_mul(sf_current);
+              float mul_voltage = sf_to_mul(sf_voltage);
+              float mul_power   = sf_to_mul(sf_power);
+              float mul_energy  = sf_to_mul(sf_energy);
+
+              // ── Extract values ────────────────────────────────
+          #if 0              
+              int16_t m_ac_current_total_raw = get_s16(0);  // 40190
+              int16_t m_ac_current_a_raw     = get_s16(1);  // 40191
+              int16_t m_ac_current_b_raw     = get_s16(2);  // 40192
+              int16_t m_ac_current_c_raw     = get_s16(3);  // 40193
+
+              int16_t m_ac_voltage_ln_total_raw = get_s16(5);  // 40195
+              int16_t m_ac_voltage_a_n_raw      = get_s16(6);  // 40196
+              int16_t m_ac_voltage_b_n_raw      = get_s16(7);  // 40197
+              int16_t m_ac_voltage_c_n_raw      = get_s16(8);  // 40198
+          #endif
+              int16_t m_ac_power_total_raw = -get_s16(16); // 40206
+              int16_t m_ac_power_a_raw     = -get_s16(17); // 40207
+              int16_t m_ac_power_b_raw     = -get_s16(18); // 40208
+              int16_t m_ac_power_c_raw     = -get_s16(19); // 40209
+
+              uint32_t m_exported_total_raw = get_u32(36); // 40226-40227
+              uint32_t m_imported_total_raw = get_u32(44); // 40234-40235
+              
+              // ── Calculations ────────────────────────────────
+          #if 0              
+              float m_ac_current_total = static_cast<float>(m_ac_current_total_raw) * mul_current;
+              float m_ac_current_a     = static_cast<float>(m_ac_current_a_raw) * mul_current;
+              float m_ac_current_b     = static_cast<float>(m_ac_current_b_raw) * mul_current;
+              float m_ac_current_c     = static_cast<float>(m_ac_current_c_raw) * mul_current;
+
+              float m_ac_voltage_ln_total = static_cast<float>(m_ac_voltage_ln_total_raw) * mul_voltage;
+              float m_ac_voltage_a_n      = static_cast<float>(m_ac_voltage_a_n_raw) * mul_voltage;
+              float m_ac_voltage_b_n      = static_cast<float>(m_ac_voltage_b_n_raw) * mul_voltage;
+              float m_ac_voltage_c_n      = static_cast<float>(m_ac_voltage_c_n_raw) * mul_voltage;
+          #endif
+              float m_ac_power_total = static_cast<float>(m_ac_power_total_raw) * mul_power;
+              float m_ac_power_a     = static_cast<float>(m_ac_power_a_raw) * mul_power;
+              float m_ac_power_b     = static_cast<float>(m_ac_power_b_raw) * mul_power;
+              float m_ac_power_c     = static_cast<float>(m_ac_power_c_raw) * mul_power;
+
+              float m_exported_total = static_cast<float>(m_exported_total_raw) * mul_energy;
+              float m_imported_total = static_cast<float>(m_imported_total_raw) * mul_energy;
+          #if 0        
+              // ── Store globals ────────────────────────────────
+              id(global_m_ac_current_total) = m_ac_current_total;
+              id(global_m_ac_current_a)     = m_ac_current_a;
+              id(global_m_ac_current_b)     = m_ac_current_b;
+              id(global_m_ac_current_c)     = m_ac_current_c;
+
+              id(global_m_ac_voltage_ln_total) = m_ac_voltage_ln_total;
+              id(global_m_ac_voltage_a_n)      = m_ac_voltage_a_n;
+              id(global_m_ac_voltage_b_n)      = m_ac_voltage_b_n;
+              id(global_m_ac_voltage_c_n)      = m_ac_voltage_c_n;
+          #endif
+              id(global_m_ac_power_total) = m_ac_power_total;
+              id(global_m_ac_power_a)     = m_ac_power_a;
+              id(global_m_ac_power_b)     = m_ac_power_b;
+              id(global_m_ac_power_c)     = m_ac_power_c;
+
+              id(global_m_exported_total) = m_exported_total;
+              id(global_m_imported_total) = m_imported_total;
+              
+              ESP_LOGD("solaredge_summary", "Read OK | Power Total=%.0f W | Exported Total=%.0f Wh | Imported Total=%.0f Wh",
+                       m_ac_power_total, m_exported_total, m_imported_total);
+            }
+          );
+
+          controller->queue_command(cmd);
+          ESP_LOGD("timing", "Solaredge METER command queued...");
+      - lambda: |-
+          auto *controller = id(solaredge_controller);
+          uint16_t start_addr = 40071;  // 0-based protocol address for register 40072 (base 1)
+          uint16_t count = 32;          // Covers up to ~40110, includes freq, energy, voltages
+
+          static bool pending = false;
+          if (pending) {
+            ESP_LOGW("modbus_solaredge", "Pending reading inverter. Skipping...");
+          }
+          pending = true;
+
+          auto cmd = esphome::modbus_controller::ModbusCommandItem::create_read_command(
+            controller,
+            ModbusRegisterType::HOLDING,
+            start_addr,
+            count,
+            [count](ModbusRegisterType reg_type, uint16_t addr, const std::vector<uint8_t> &data) {
+              pending = false;  // reset flag when done
+              ESP_LOGI("timing", "Solaredge took %u ms to reply", millis() - id(global_modbus_response_timer));            
+
+              if (data.size() != count * 2) {
+                ESP_LOGE("modbus_solaredge", "Invalid response size: got %zu, expected %u", data.size(), count * 2);
+                return;
+              }
+
+              auto get_u16 = [&data](size_t reg_offset) -> uint16_t {
+                size_t byte_idx = reg_offset * 2;
+                return (static_cast<uint16_t>(data[byte_idx]) << 8) |
+                       static_cast<uint16_t>(data[byte_idx + 1]);
+              };
+
+              auto get_s16 = [&get_u16](size_t reg_offset) -> int16_t {
+                return static_cast<int16_t>(get_u16(reg_offset));
+              };
+
+               
+              // Using powf(sf) takes 350 µs instead of 104 µs on ESP32-C3
+              auto mul_from_sf = [](int16_t sf) -> float {
+                // Lookup table for common SF → dynamic multipliers
+                // index 0 = sf -4, index 1 = sf -3, ...,
+                constexpr float mul_table[] = {0.000001f, 0.00001f, 0.0001f, 0.001f, 0.01f, 0.1f, 1.0f, 10.0f, 100.0f};
+                int idx = sf + 6;           // -6 → 0, -5 → 1, ..., +2 → 8
+                if (idx >= 0 && idx <= 8) {
+                  return mul_table[idx];
+                }
+                if (sf < -8) return 0.0f;
+                ESP_LOGW("scale", "Unexpected inverter SF:  using powf(10, %d)", sf);
+                return powf(10.0f, sf);
+              };
+              
+              int16_t sf_current      = get_s16( 4);   // 40075
+              int16_t sf_voltage      = get_s16(11);   // 40082
+              int16_t sf_power        = get_s16(13);   // 40084
+              int16_t sf_frequency    = get_s16(15);   // 40086
+              //int16_t sf_power_va     = get_s16(17);
+              int16_t sf_pf           = get_s16(21);   // 40093
+              int16_t sf_energy_wh    = get_s16(24);   // 40095
+              int16_t sf_dc_current   = get_s16(26);   // 40098
+              int16_t sf_dc_voltage   = get_s16(28);   // 40100
+              int16_t sf_dc_power     = get_s16(30);   // 40102
+
+              // Scale factors
+              float mul_current   = mul_from_sf(sf_current);
+              float mul_voltage   = mul_from_sf(sf_voltage);
+              float mul_power   = mul_from_sf(sf_power);
+              float mul_pf    = mul_from_sf(sf_pf);
+              float mul_frequency  = mul_from_sf(sf_frequency);
+              //float mul_power_va = mul_from_sf(sf_power_va);
+              float mul_energy = mul_from_sf(sf_energy_wh);
+              float mul_dc_cur = mul_from_sf(sf_dc_current);
+              float mul_dc_vol = mul_from_sf(sf_dc_voltage);
+              float mul_dc_pow = mul_from_sf(sf_dc_power);
+              #if 0
+              static uint32_t log_counter = 0;
+              if (++log_counter % 60 == 3) {                                                            
+                 ESP_LOGI("mul", "mul_current   = %.4f  (from sf=%d)", mul_current,   sf_current);        
+                 ESP_LOGI("mul", "mul_voltage   = %.4f  (from sf=%d)", mul_voltage,   sf_voltage);
+                 ESP_LOGI("mul", "mul_power     = %.4f  (from sf=%d)", mul_power,     sf_power); 
+                 ESP_LOGI("mul", "mul_frequency = %.4f  (from sf=%d)", mul_frequency, sf_frequency);      
+                 ESP_LOGI("mul", "mul_pf        = %.4f  (from sf=%d)", mul_pf,        sf_pf);  
+                 ESP_LOGI("mul", "mul_energy    = %.4f  (from sf=%d)", mul_energy,    sf_energy_wh);      
+                 ESP_LOGI("mul", "mul_dc_cur    = %.4f  (from sf=%d)", mul_dc_cur,    sf_dc_current);     
+                 ESP_LOGI("mul", "mul_dc_vol    = %.4f  (from sf=%d)", mul_dc_vol,    sf_dc_voltage);     
+                 ESP_LOGI("mul", "mul_dc_pow    = %.4f  (from sf=%d)", mul_dc_pow,    sf_dc_power);
+              }
+              #endif
+              // ── AC side ──
+              uint16_t I_AC_Current_total = get_u16(0);
+              uint16_t I_AC_CurrentA      = get_u16(1);
+              uint16_t I_AC_CurrentB      = get_u16(2);
+              uint16_t I_AC_CurrentC      = get_u16(3);
+              int16_t  I_AC_Power_raw     = get_s16(12);
+              uint16_t I_AC_Freq_raw      = get_u16(14);  // 40085
+              //uint16_t I_AC_Power_VA_raw  = get_s16(16);
+              int16_t  pf_raw             = get_s16(20);  // 40091 → I_AC_PF
+
+              uint32_t energy_raw         = (static_cast<uint32_t>(get_u16(22)) << 16) |
+                                            get_u16(23);  // 40093-40094 acc32
+
+              uint16_t I_AC_VoltageAN_raw = get_u16(8);
+              uint16_t I_AC_VoltageBN_raw = get_u16(9);
+              uint16_t I_AC_VoltageCN_raw = get_u16(10);
+
+              // Calculations
+              float cur_a = static_cast<float>(I_AC_CurrentA) * mul_current;
+              float cur_b = static_cast<float>(I_AC_CurrentB) * mul_current;
+              float cur_c = static_cast<float>(I_AC_CurrentC) * mul_current;
+
+              float v_an  = static_cast<float>(I_AC_VoltageAN_raw) * mul_voltage;
+              float v_bn  = static_cast<float>(I_AC_VoltageBN_raw) * mul_voltage;
+              float v_cn  = static_cast<float>(I_AC_VoltageCN_raw) * mul_voltage;
+
+              float pow_total = static_cast<float>(I_AC_Power_raw) * mul_power;
+              float pf_total  = static_cast<float>(pf_raw) * mul_pf;
+              //float pow_total_va = static_cast<float>(I_AC_Power_VA_raw) * mul_power_va;
+
+              float frequency = static_cast<float>(I_AC_Freq_raw) * mul_frequency;
+              float energy_wh = static_cast<float>(energy_raw) * mul_energy;
+
+              // Per-phase power
+              float pf;
+              float pva = v_an * cur_a + v_bn * cur_b  + v_cn * cur_c;
+              if (pva > 0.0f) pf = pow_total/pva;
+              else pf = 0.0f;
+              float pow_a = v_an * cur_a * pf;
+              float pow_b = v_bn * cur_b * pf;
+              float pow_c = v_cn * cur_c * pf;
+
+              if (v_an < 1.0f || v_bn < 1.0f || v_cn < 1.0f) {
+                float sum_cur = cur_a + cur_b + cur_c + 1e-6f;
+                pow_a = pow_total * (cur_a / sum_cur);
+                pow_b = pow_total * (cur_b / sum_cur);
+                pow_c = pow_total * (cur_c / sum_cur);
+              }
+
+              // Store globals
+              id(global_ac_power_total) = pow_total;
+              id(global_ac_power_a)     = pow_a;
+              id(global_ac_power_b)     = pow_b;
+              id(global_ac_power_c)     = pow_c;
+              id(global_ac_power_va_a)  = v_an * cur_a;
+              id(global_ac_power_va_b)  = v_bn * cur_b;
+              id(global_ac_power_va_c)  = v_cn * cur_c;
+              id(global_ac_pf)          = pf_total;
+              id(global_ac_frequency)   = frequency;
+              id(global_ac_voltage_an)  = v_an;
+              id(global_ac_voltage_bn)  = v_bn;
+              id(global_ac_voltage_cn)  = v_cn;
+              id(global_ac_energy_wh)   = energy_wh;
+
+              // ── DC side (indices 25+) ──
+              int16_t I_DC_Current_raw    = get_s16(25) > 0 ? get_s16(25) : 0 ;
+              uint16_t I_DC_Voltage_raw   = get_u16(27);
+              int16_t  I_DC_Power_raw     = get_s16(29);
+
+              float dc_current = static_cast<float>(I_DC_Current_raw) * mul_dc_cur;
+              float dc_voltage = static_cast<float>(I_DC_Voltage_raw) * mul_dc_vol;
+              float dc_power   = static_cast<float>(I_DC_Power_raw)   * mul_dc_pow;
+
+              id(global_dc_current) = dc_current;
+              id(global_dc_voltage) = dc_voltage;
+              id(global_dc_power)   = dc_power;
+
+              ESP_LOGD("solaredge_summary", "Read OK | Freq=%.2f Hz | Energy=%.0f Wh | V_AN=%.1f V | DC=%.0f W",
+                       frequency, energy_wh, v_an, dc_power);
+              //ESP_LOGI("power_sum", "Total = %f (%f+%f+%f)=%f", pow_total, pow_a, pow_b, pow_c, pow_a+pow_b+pow_c);
+            }
+          );
+
+          controller->queue_command(cmd);
+          ESP_LOGD("timing", "Solaredge command queued...");
+
+
+ 
+sensor:
+  # Inverter sensors (5s update) for Grid Tie Meter2
+  - platform: template
+    name: "AC Power Total"
+    id: s_ac_power_total
+    device_id: ${device_id_solaredge_inverter}
+    unit_of_measurement: "W"
+    device_class: power
+    state_class: measurement
+    accuracy_decimals: 0
+    icon: "mdi:solar-power"
+    update_interval: 5s
+    lambda: 'return id(global_ac_power_total);'
+
+  - platform: template
+    name: "AC Phase A Power"
+    id: s_ac_power_a
+    device_id: ${device_id_solaredge_inverter}
+    unit_of_measurement: "W"
+    device_class: power
+    state_class: measurement
+    accuracy_decimals: 0
+    icon: "mdi:alpha-a-circle"
+    update_interval: 5s
+    lambda: 'return id(global_ac_power_a);'
+
+  - platform: template
+    name: "AC Phase B Power"
+    id: s_ac_power_b
+    device_id: ${device_id_solaredge_inverter}
+    unit_of_measurement: "W"
+    device_class: power
+    state_class: measurement
+    accuracy_decimals: 0
+    icon: "mdi:alpha-b-circle"
+    update_interval: 5s
+    lambda: 'return id(global_ac_power_b);'
+
+  - platform: template
+    name: "AC Phase C Power"
+    id: s_ac_power_c
+    device_id: ${device_id_solaredge_inverter}
+    unit_of_measurement: "W"
+    device_class: power
+    state_class: measurement
+    accuracy_decimals: 0
+    icon: "mdi:alpha-c-circle"
+    update_interval: 5s
+    lambda: 'return id(global_ac_power_c);'
+
+  # - platform: template
+  #   name: "AC Apparent Power A"
+  #   id: s_ac_power_va_a
+  #   device_id: ${device_id_solaredge_inverter}
+  #   unit_of_measurement: VA
+  #   device_class: apparent_power
+  #   state_class: measurement
+  #   accuracy_decimals: 0
+  #   icon: "mdi:lightning-bolt-circle"
+  #   update_interval: 5s
+  #   lambda: 'return id(global_ac_power_va_a);'
+
+  # - platform: template
+  #   name: "AC Apparent Power B"
+  #   id: s_ac_power_va_b
+  #   device_id: ${device_id_solaredge_inverter}
+  #   unit_of_measurement: VA
+  #   device_class: apparent_power
+  #   state_class: measurement
+  #   accuracy_decimals: 0
+  #   icon: "mdi:lightning-bolt-circle"
+  #   update_interval: 5s
+  #   lambda: 'return id(global_ac_power_va_b);'
+
+  # - platform: template
+  #   name: "AC Apparent Power C"
+  #   id: s_ac_power_va_c
+  #   device_id: ${device_id_solaredge_inverter}
+  #   unit_of_measurement: VA
+  #   device_class: apparent_power
+  #   state_class: measurement
+  #   accuracy_decimals: 0
+  #   icon: "mdi:lightning-bolt-circle"
+  #   update_interval: 5s
+  #   lambda: 'return id(global_ac_power_va_c);'
+
+  # - platform: template
+  #   name: "AC Power Factor"
+  #   id: s_ac_pf
+  #   device_id: ${device_id_solaredge_inverter}
+  #   accuracy_decimals: 2
+  #   unit_of_measurement: "%"
+  #   icon: "mdi:cosine-wave"
+  #   update_interval: 5s
+  #   lambda: 'return id(global_ac_pf);'
+
+  - platform: template
+    name: "DC Power"
+    id: s_dc_power
+    device_id: ${device_id_solaredge_inverter}
+    unit_of_measurement: "W"
+    device_class: power
+    state_class: measurement
+    accuracy_decimals: 0
+    icon: "mdi:solar-panel"
+    update_interval: 10s
+    lambda: 'return id(global_dc_power);'
+
+  - platform: template
+    name: "DC Current"
+    id: s_dc_current
+    device_id: ${device_id_solaredge_inverter}
+    unit_of_measurement: "A"
+    device_class: current
+    state_class: measurement
+    accuracy_decimals: 2
+    icon: "mdi:current-dc"
+    update_interval: 10s
+    lambda: 'return id(global_dc_current);'
+
+  - platform: template
+    name: "DC Voltage"
+    id: s_dc_voltage
+    device_id: ${device_id_solaredge_inverter}
+    unit_of_measurement: "V"
+    device_class: voltage
+    state_class: measurement
+    accuracy_decimals: 1
+    icon: "mdi:flash"
+    update_interval: 10s
+    lambda: 'return id(global_dc_voltage);'
+
+  # - platform: template
+  #   name: "AC Frequency"
+  #   id: s_ac_frequency
+  #   device_id: ${device_id_solaredge_inverter}
+  #   unit_of_measurement: "Hz"
+  #   device_class: frequency
+  #   state_class: measurement
+  #   accuracy_decimals: 2
+  #   icon: "mdi:sine-wave"
+  #   update_interval: 5s
+  #   lambda: 'return id(global_ac_frequency);'
+
+  # - platform: template
+  #   name: "AC Voltage AN"
+  #   id: s_ac_voltage_an
+  #   device_id: ${device_id_solaredge_inverter}
+  #   unit_of_measurement: "V"
+  #   device_class: voltage
+  #   state_class: measurement
+  #   accuracy_decimals: 1
+  #   icon: "mdi:alpha-a-circle-outline"
+  #   update_interval: 5s
+  #   lambda: 'return id(global_ac_voltage_an);'
+
+  # - platform: template
+  #   name: "AC Voltage BN"
+  #   id: s_ac_voltage_bn
+  #   device_id: ${device_id_solaredge_inverter}
+  #   unit_of_measurement: "V"
+  #   device_class: voltage
+  #   state_class: measurement
+  #   accuracy_decimals: 1
+  #   icon: "mdi:alpha-b-circle-outline"
+  #   update_interval: 5s
+  #   lambda: 'return id(global_ac_voltage_bn);'
+
+  # - platform: template
+  #   name: "AC Voltage CN"
+  #   id: s_ac_voltage_cn
+  #   device_id: ${device_id_solaredge_inverter}
+  #   unit_of_measurement: "V"
+  #   device_class: voltage
+  #   state_class: measurement
+  #   accuracy_decimals: 1
+  #   icon: "mdi:alpha-c-circle-outline"
+  #   update_interval: 5s
+  #   lambda: 'return id(global_ac_voltage_cn);'
+
+  - platform: template
+    name: "AC Lifetime Energy"
+    id: s_ac_lifetime_energy
+    device_id: ${device_id_solaredge_inverter}
+    unit_of_measurement: "kWh"
+    device_class: energy
+    state_class: total_increasing
+    accuracy_decimals: 0
+    icon: "mdi:lightning-bolt-circle"
+    update_interval: 10s
+    lambda: 'return id(global_ac_energy_wh) / 1000.0;'
+
+  # Meter1 sensors (10s update) – "Meter" removed from names
+  - platform: template
+    name: "AC Current Total"
+    id: s_meter_ac_current_total
+    device_id: ${device_id_solaredge_meter1}
+    unit_of_measurement: "A"
+    device_class: current
+    state_class: measurement
+    accuracy_decimals: 2
+    update_interval: 10s
+    lambda: 'return id(global_m_ac_current_total);'
+
+  # - platform: template
+  #   name: "AC Current A"
+  #   id: s_meter_ac_current_a
+  #   device_id: ${device_id_solaredge_meter1}
+  #   unit_of_measurement: "A"
+  #   device_class: current
+  #   state_class: measurement
+  #   accuracy_decimals: 2
+  #   update_interval: 10s
+  #   lambda: 'return id(global_m_ac_current_a);'
+
+  # - platform: template
+  #   name: "AC Current B"
+  #   id: s_meter_ac_current_b
+  #   device_id: ${device_id_solaredge_meter1}
+  #   unit_of_measurement: "A"
+  #   device_class: current
+  #   state_class: measurement
+  #   accuracy_decimals: 2
+  #   update_interval: 10s
+  #   lambda: 'return id(global_m_ac_current_b);'
+
+  # - platform: template
+  #   name: "AC Current C"
+  #   id: s_meter_ac_current_c
+  #   device_id: ${device_id_solaredge_meter1}
+  #   unit_of_measurement: "A"
+  #   device_class: current
+  #   state_class: measurement
+  #   accuracy_decimals: 2
+  #   update_interval: 10s
+  #   lambda: 'return id(global_m_ac_current_c);'
+
+  # - platform: template
+  #   name: "AC Voltage LN Total"
+  #   id: s_meter_ac_voltage_ln_total
+  #   device_id: ${device_id_solaredge_meter1}
+  #   unit_of_measurement: "V"
+  #   device_class: voltage
+  #   state_class: measurement
+  #   accuracy_decimals: 1
+  #   update_interval: 10s
+  #   lambda: 'return id(global_m_ac_voltage_ln_total);'
+
+  # - platform: template
+  #   name: "AC Voltage A N"
+  #   id: s_meter_ac_voltage_a_n
+  #   device_id: ${device_id_solaredge_meter1}
+  #   unit_of_measurement: "V"
+  #   device_class: voltage
+  #   state_class: measurement
+  #   accuracy_decimals: 1
+  #   update_interval: 10s
+  #   lambda: 'return id(global_m_ac_voltage_a_n);'
+
+  # - platform: template
+  #   name: "AC Voltage B N"
+  #   id: s_meter_ac_voltage_b_n
+  #   device_id: ${device_id_solaredge_meter1}
+  #   unit_of_measurement: "V"
+  #   device_class: voltage
+  #   state_class: measurement
+  #   accuracy_decimals: 1
+  #   update_interval: 10s
+  #   lambda: 'return id(global_m_ac_voltage_b_n);'
+
+  # - platform: template
+  #   name: "AC Voltage C N"
+  #   id: s_meter_ac_voltage_c_n
+  #   device_id: ${device_id_solaredge_meter1}
+  #   unit_of_measurement: "V"
+  #   device_class: voltage
+  #   state_class: measurement
+  #   accuracy_decimals: 1
+  #   update_interval: 10s
+  #   lambda: 'return id(global_m_ac_voltage_c_n);'
+
+  - platform: template
+    name: "AC Real Power Total"
+    id: s_meter_ac_power_total
+    device_id: ${device_id_solaredge_meter1}
+    unit_of_measurement: "W"
+    device_class: power
+    state_class: measurement
+    accuracy_decimals: 0
+    update_interval: 5s
+    lambda: 'return id(global_m_ac_power_total);'
+
+  - platform: template
+    name: "AC Real Power A"
+    id: s_meter_ac_power_a
+    device_id: ${device_id_solaredge_meter1}
+    unit_of_measurement: "W"
+    device_class: power
+    state_class: measurement
+    accuracy_decimals: 0
+    update_interval: 5s
+    lambda: 'return id(global_m_ac_power_a);'
+
+  - platform: template
+    name: "AC Real Power B"
+    id: s_meter_ac_power_b
+    device_id: ${device_id_solaredge_meter1}
+    unit_of_measurement: "W"
+    device_class: power
+    state_class: measurement
+    accuracy_decimals: 0
+    update_interval: 5s
+    lambda: 'return id(global_m_ac_power_b);'
+
+  - platform: template
+    name: "AC Real Power C"
+    id: s_meter_ac_power_c
+    device_id: ${device_id_solaredge_meter1}
+    unit_of_measurement: "W"
+    device_class: power
+    state_class: measurement
+    accuracy_decimals: 0
+    update_interval: 5s
+    lambda: 'return id(global_m_ac_power_c);'
+
+  - platform: template
+    name: "Exported Energy Total"
+    id: s_meter_exported_total
+    device_id: ${device_id_solaredge_meter1}
+    unit_of_measurement: "kWh"
+    device_class: energy
+    state_class: total_increasing
+    accuracy_decimals: 0
+    update_interval: 30s
+    lambda: 'return id(global_m_exported_total) / 1000.0;'
+
+  - platform: template
+    name: "Imported Energy Total"
+    id: s_meter_imported_total
+    device_id: ${device_id_solaredge_meter1}
+    unit_of_measurement: "kWh"
+    device_class: energy
+    state_class: total_increasing
+    accuracy_decimals: 0
+    update_interval: 30s
+    lambda: 'return id(global_m_imported_total) / 1000.0;'

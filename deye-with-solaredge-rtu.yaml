@@ -1,0 +1,202 @@
+# https://github.com/kosl/esphome-fake-eastron-SDM630-with-CTs
+# This is a bridge for Deye Inv-Meter2 addon, where Eastron SDM630 RS485/RTU
+# is emulated from Solaredge SE17K inverter using Modbus/RTU client.
+# In addition it provides Deye sensors and controls.
+
+esphome:
+  name: energy-meter
+  friendly_name: deye
+  min_version: 2026.1.0 
+  devices: # https://esphome.io/components/esphome/#sub-devices
+    - id: device_solaredge
+      name: "Solaredge Inverter"
+    - id: device_solaredge_meter1
+      name: "Solaredge Meter 1"
+  on_boot:
+    priority: 600  # Medium-high priority (after WiFi connects)
+    then:
+      - light.turn_on:
+          id: onboard_rgb_led
+          red: 50%
+          green: 0%
+          blue: 50%
+          brightness: 50%
+
+esp32:
+  board: esp32-s3-fh4r2 # ESP32-S3 zero board
+  framework:
+    type: esp-idf
+
+# Enable logging
+logger:
+  level: INFO
+  baud_rate: 0
+  logs:
+    sensor: INFO
+    modbus_controller.sensor: INFO
+    timing: WARN
+    solaredge_summary: INFO
+    modbus_server: INFO
+    health: WARN
+
+api: # Enable Home Assistant API
+
+ota:
+  - platform: esphome
+
+wifi:
+  networks:
+    - ssid: !secret wifi_eteradxa_ssid
+      password: !secret wifi_password
+    - ssid: !secret wifi_garaza_ssid
+      password: !secret wifi_password
+    - ssid: !secret wifi_ssid
+      password: !secret wifi_password
+  output_power: 8.5dB
+  power_save_mode: none  # Better reliability over power saving  
+
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+    ssid: "Deye Fallback Hotspot"
+    password: !secret wifi_password
+
+captive_portal:
+
+external_components:
+  # https://github.com/esphome/esphome/issues/12183$0
+  - source: github://pr#11969
+    components: [modbus, modbus_controller, modbus_server]
+    refresh: 1h
+  - source:
+      type: git
+      url: https://github.com/rosenrot00/esphome_modbus_bridge
+    components: [modbus_bridge]
+
+uart:
+  # GPIO4 - RX to RXD of middle RS485 module
+  # GPIO5 - TX to TXD of middle RS485 module
+  - id: uart_meter
+    rx_pin: GPIO4
+    tx_pin: GPIO5
+    baud_rate: 9600
+    rx_buffer_size: 256
+    debug:
+      direction: BOTH
+  # GPIO3 - RX to RXD of bottom RS485 module
+  # GPIO1 - TX to TXD of bottom RS485 module
+  - id: uart_modbus_bridge
+    rx_pin: GPIO3
+    tx_pin: GPIO1
+    baud_rate: 115200
+    rx_buffer_size: 512 # minimum 256 recommended; increase for long RTU responses
+    #debug:
+    #  direction: BOTH
+  # Top MAX3485 to Solaredge    
+  - id: uart_solaredge
+    rx_pin: GPIO44
+    tx_pin: GPIO43
+    baud_rate: 19200
+    rx_buffer_size: 512 # minimum 256 recommended; increase for long RTU responses
+    #debug:
+    #  direction: BOTH
+      
+modbus:
+  - id: modbus_meter
+    uart_id: uart_meter
+    role: server # https://esphome.io/components/modbus_controller/#example-server
+  - id: modbus_solaredge
+    send_wait_time: 200ms # Solaredge responds in < 150 ms
+    uart_id: uart_solaredge
+ 
+
+# Include packages for Solaredge to Eastron 
+packages:
+# Include packages for Eastron
+  solaredge_meter: !include
+    file: device-solaredge-rtu-sdm630.yaml
+    vars:
+      modbus_id_meter: modbus_meter
+      modbus_id_solaredge: modbus_solaredge
+      device_id_solaredge_inverter: device_solaredge
+      device_id_solaredge_meter1: device_solaredge_meter1
+# deye:
+#   url: https://github.com/KastB/esphome-for-deye
+#   path: modules
+#   files: [solar.yaml, battery.yaml, load.yaml, generator.yaml, general.yaml]
+#   ref: main
+
+  # Health monitoring (without WiFi check to avoid compilation issues)
+interval:
+  - interval: 30s
+    then:
+      - lambda: |-
+          ESP_LOGI("health", "System Health: Heap=%d ", esp_get_free_heap_size());
+
+# =========== Diagnostic sensors ===========
+# Enable built-in status LED on GPIO8
+light:
+  - platform: esp32_rmt_led_strip
+    rgb_order: GRB
+    chipset: ws2812
+    pin: 
+      number: GPIO21
+    num_leds: 1
+    name: "Onboard RGB LED"
+    id: onboard_rgb_led
+    entity_category: diagnostic
+
+button:
+  - platform: restart
+    entity_category: diagnostic
+    name: Restart
+
+sensor:
+  - platform: wifi_signal
+    name: "WiFi Signal Strength"
+    id: wifi_rssi
+    update_interval: 1min  
+    unit_of_measurement: "dBm"
+    accuracy_decimals: 0
+    device_class: signal_strength
+    entity_category: diagnostic    
+
+  - platform: template
+    name: "TCP Clients"
+    id: mb_tcp_clients
+    accuracy_decimals: 0
+    unit_of_measurement: count
+    update_interval: never
+
+# Modbus bridge configuration: TCP server <-> UART RTU translator
+modbus_bridge:
+  id: mb_bridge
+  uart_id: uart_modbus_bridge
+  tcp_port: 502                  # TCP port to listen on
+  rtu_response_timeout: 400      # ms, internally clamped to >=10 ms
+  # tcp_client_timeout: 60000    # ms of inactivity before client is disconnected
+  # tcp_allowed_clients: 2       # number of simultaneous TCP clients (min 1)
+  # tcp_poll_interval: 50        # ms between TCP polls
+  # de_pin: GPIO18               # Optional: RS-485 Driver Enable (DE)
+  # re_pin: GPIO19               # Optional: RS-485 Receiver Enable (/RE) - de_pin and re_pin can be the same GPIO
+  # (DE and /RE may be the same GPIO if the transceiver ties them together)
+  # crc_bytes_swapped: false     # allows to swap CRC byte order LO/HI -> HI/LO
+  # enabled: true                # allows to enable or disable during runtime
+  # uart_wake_loop_on_rx: false  # default false; set true to enable ESPHome's UART low-latency RX wake
+  # Event: triggered whenever number of TCP clients changes
+  on_tcp_clients_changed:
+    then:
+      - lambda: |-
+          id(tcp_clients) = count;
+      - logger.log:
+          format: "TCP clients connected: %d"
+          args: ['count']
+      - sensor.template.publish:
+            id: mb_tcp_clients
+            state: !lambda |-
+              return (int) count;
+# Global variable to store connected TCP client count
+globals:
+  - id: tcp_clients
+    type: int
+    restore_value: no
+    initial_value: '0'
